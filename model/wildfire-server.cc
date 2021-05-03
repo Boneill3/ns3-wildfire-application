@@ -11,8 +11,8 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USo
+ * 
  * Author: Brian O'Neill <broneill@pdx.edu>
  */
 #include "ns3/log.h"
@@ -90,6 +90,8 @@ WildfireServer::StartApplication()
           NS_FATAL_ERROR ("Failed to bind socket");
         }
     }
+
+  m_socket->SetRecvCallback (MakeCallback (&WildfireServer::HandleRead, this));
 }
 
 void 
@@ -128,7 +130,7 @@ WildfireServer::HandleRead (Ptr<Socket> socket)
       packet->RemoveAllByteTags ();
 
       NS_LOG_LOGIC ("Adding Subscriber");
-      subscribers.push_back(from);
+      //subscribers.push_back(from);
       socket->SendTo (packet, 0, from);
 
       if (InetSocketAddress::IsMatchingType (from))

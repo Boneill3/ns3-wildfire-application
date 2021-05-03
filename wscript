@@ -10,6 +10,7 @@ def build(bld):
     module = bld.create_ns3_module('wildfire', ['applications'])
     module.source = [
         'model/wildfire-server.cc',
+        'model/wildfire-client.cc',
         'helper/wildfire-helper.cc',
         ]
 
@@ -27,6 +28,7 @@ def build(bld):
     headers.module = 'wildfire'
     headers.source = [
         'model/wildfire-server.h',
+        'model/wildfire-client.h',
         'helper/wildfire-helper.h',
         ]
 

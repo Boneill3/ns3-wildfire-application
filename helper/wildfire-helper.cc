@@ -11,8 +11,8 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USo
+ * 
  * Author: Brian O'Neill <broneill@pdx.edu>
  */
 #include "wildfire-helper.h"
@@ -20,6 +20,7 @@
 #include "ns3/names.h"
 
 #include "ns3/wildfire-server.h"
+#include "ns3/wildfire-client.h"
 
 namespace ns3 {
 
@@ -67,6 +68,79 @@ Ptr<Application>
 WildfireServerHelper::InstallPriv (Ptr<Node> node) const
 {
   Ptr<Application> app = m_factory.Create<WildfireServer> ();
+  node->AddApplication (app);
+
+  return app;
+}
+
+WildfireClientHelper::WildfireClientHelper (Address address, uint16_t port)
+{
+  m_factory.SetTypeId (WildfireClient::GetTypeId ());
+  SetAttribute ("RemoteAddress", AddressValue (address));
+  SetAttribute ("RemotePort", UintegerValue (port));
+}
+
+WildfireClientHelper::WildfireClientHelper (Address address)
+{
+  m_factory.SetTypeId (WildfireClient::GetTypeId ());
+  SetAttribute ("RemoteAddress", AddressValue (address));
+}
+
+void 
+WildfireClientHelper::SetAttribute (
+  std::string name, 
+  const AttributeValue &value)
+{
+  m_factory.Set (name, value);
+}
+
+void
+WildfireClientHelper::SetFill (Ptr<Application> app, std::string fill)
+{
+  app->GetObject<WildfireClient>()->SetFill (fill);
+}
+
+void
+WildfireClientHelper::SetFill (Ptr<Application> app, uint8_t fill, uint32_t dataLength)
+{
+  app->GetObject<WildfireClient>()->SetFill (fill, dataLength);
+}
+
+void
+WildfireClientHelper::SetFill (Ptr<Application> app, uint8_t *fill, uint32_t fillLength, uint32_t dataLength)
+{
+  app->GetObject<WildfireClient>()->SetFill (fill, fillLength, dataLength);
+}
+
+ApplicationContainer
+WildfireClientHelper::Install (Ptr<Node> node) const
+{
+  return ApplicationContainer (InstallPriv (node));
+}
+
+ApplicationContainer
+WildfireClientHelper::Install (std::string nodeName) const
+{
+  Ptr<Node> node = Names::Find<Node> (nodeName);
+  return ApplicationContainer (InstallPriv (node));
+}
+
+ApplicationContainer
+WildfireClientHelper::Install (NodeContainer c) const
+{
+  ApplicationContainer apps;
+  for (NodeContainer::Iterator i = c.Begin (); i != c.End (); ++i)
+    {
+      apps.Add (InstallPriv (*i));
+    }
+
+  return apps;
+}
+
+Ptr<Application>
+WildfireClientHelper::InstallPriv (Ptr<Node> node) const
+{
+  Ptr<Application> app = m_factory.Create<WildfireClient> ();
   node->AddApplication (app);
 
   return app;
