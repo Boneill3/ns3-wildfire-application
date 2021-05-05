@@ -36,6 +36,8 @@ class WildfireServer : public Application
     WildfireServer();
     virtual ~WildfireServer();
     static TypeId GetTypeId(void);
+    void ScheduleNotification (Time dt);
+    void SendNotification();
 
   protected:
     virtual void DoDispose (void);
@@ -63,6 +65,7 @@ class WildfireServer : public Application
     TracedCallback<Ptr<const Packet>, const Address &, const Address &> m_rxTraceWithAddresses; 
 
     std::vector<Address> subscribers;
+    EventId m_sendEvent; //!< Event to send the next packet
 };
 
 } // namespace ns3

@@ -34,6 +34,7 @@ class WildfireServerHelper
     ApplicationContainer Install (Ptr<Node> node) const;
     ApplicationContainer Install (std::string nodeName) const;
     ApplicationContainer Install (NodeContainer c) const;
+    void ScheduleNotification(Ptr<Application> app, Time dt);
   
   private:
     Ptr<Application> InstallPriv (Ptr<Node> node) const;

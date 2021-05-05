@@ -73,6 +73,12 @@ WildfireServerHelper::InstallPriv (Ptr<Node> node) const
   return app;
 }
 
+void
+WildfireServerHelper::ScheduleNotification (Ptr<Application> app, Time dt)
+{
+  app->GetObject<WildfireServer>()->ScheduleNotification(dt);
+}
+
 WildfireClientHelper::WildfireClientHelper (Address address, uint16_t port)
 {
   m_factory.SetTypeId (WildfireClient::GetTypeId ());

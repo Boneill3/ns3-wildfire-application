@@ -400,6 +400,11 @@ WildfireClient::HandleRead (Ptr<Socket> socket)
       socket->GetSockName (localAddress);
       m_rxTrace (packet);
       m_rxTraceWithAddresses (packet, from, localAddress);
+
+      uint8_t buffer [100];
+      uint32_t size = 100;
+      packet->CopyData(buffer, size);
+      NS_LOG_INFO(buffer);
     }
 }
 

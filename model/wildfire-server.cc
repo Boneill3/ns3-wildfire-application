@@ -106,6 +106,27 @@ WildfireServer::StopApplication()
     }
 }
 
+void 
+WildfireServer::ScheduleNotification (Time dt)
+{
+  NS_LOG_FUNCTION (this << dt);
+  m_sendEvent = Simulator::Schedule (dt, &WildfireServer::SendNotification, this);
+}
+
+void
+WildfireServer::SendNotification ()
+{
+  Ptr<Packet> p;
+  uint32_t size = 100;
+  uint8_t data[100] = "Level1 Alert";
+  p = Create<Packet> (data, size);
+  for (auto subscriber = subscribers.begin(); subscriber != subscribers.end(); ++subscriber)
+  {
+    m_socket->SendTo (p, 0, *subscriber);
+    NS_LOG_INFO("Wildfire Notification SENT!");
+  }
+}
+
 void
 WildfireServer::HandleRead (Ptr<Socket> socket)
 {
@@ -126,11 +147,18 @@ WildfireServer::HandleRead (Ptr<Socket> socket)
                        InetSocketAddress::ConvertFrom (from).GetPort ());
         }
 
+      uint8_t buffer [100];
+      uint32_t size = 100;
+      packet->CopyData(buffer, size);
+      NS_LOG_INFO(buffer);
       packet->RemoveAllPacketTags ();
       packet->RemoveAllByteTags ();
 
-      NS_LOG_LOGIC ("Adding Subscriber");
-      //subscribers.push_back(from);
+      if(memcmp(buffer,"Subscribe",9) == 0)
+      {
+        NS_LOG_INFO("Adding Subscriber");
+        subscribers.push_back(from);
+      }
       socket->SendTo (packet, 0, from);
 
       if (InetSocketAddress::IsMatchingType (from))
