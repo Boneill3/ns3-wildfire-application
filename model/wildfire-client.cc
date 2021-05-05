@@ -405,6 +405,14 @@ WildfireClient::HandleRead (Ptr<Socket> socket)
       uint32_t size = 100;
       packet->CopyData(buffer, size);
       NS_LOG_INFO(buffer);
+
+      if(!received && memcmp(buffer,"Level1 Alert",12) == 0)
+      {
+        received = true;
+        NS_LOG_INFO("Rebroadcast Over Wifi");
+        m_socket->Connect (InetSocketAddress (Ipv4Address ("255.255.255.255"), 49153)); // why this port?
+        m_socket->Send(packet);
+      }
     }
 }
 

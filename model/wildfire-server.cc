@@ -150,7 +150,7 @@ WildfireServer::HandleRead (Ptr<Socket> socket)
       uint8_t buffer [100];
       uint32_t size = 100;
       packet->CopyData(buffer, size);
-      NS_LOG_INFO(buffer);
+      //NS_LOG_INFO(buffer);
       packet->RemoveAllPacketTags ();
       packet->RemoveAllByteTags ();
 
@@ -159,7 +159,7 @@ WildfireServer::HandleRead (Ptr<Socket> socket)
         NS_LOG_INFO("Adding Subscriber");
         subscribers.push_back(from);
       }
-      socket->SendTo (packet, 0, from);
+      //socket->SendTo (packet, 0, from);
 
       if (InetSocketAddress::IsMatchingType (from))
         {
