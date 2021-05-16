@@ -12,7 +12,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USo
- * 
+ *
  * Author: Brian O'Neill <broneill@pdx.edu>
  */
 #include "ns3/log.h"
@@ -36,23 +36,23 @@ namespace ns3 {
 
 NS_OBJECT_ENSURE_REGISTERED (WildfireServer);
 
-WildfireServer::WildfireServer()
+WildfireServer::WildfireServer ()
 {
   NS_LOG_FUNCTION (this);
 }
 
-WildfireServer::~WildfireServer()
+WildfireServer::~WildfireServer ()
 {
   NS_LOG_FUNCTION (this);
   m_socket = 0;
 }
 
-TypeId 
-WildfireServer::GetTypeId()
+TypeId
+WildfireServer::GetTypeId ()
 {
   static TypeId tid = TypeId ("ns3::WildfireServer")
     .SetParent<Application> ()
-    .SetGroupName("Applications")
+    .SetGroupName ("Applications")
     .AddConstructor<WildfireServer> ()
     .AddAttribute ("Port", "Port on which we listen for incoming packets.",
                    UintegerValue (9),
@@ -75,8 +75,8 @@ WildfireServer::DoDispose (void)
   Application::DoDispose ();
 }
 
-void 
-WildfireServer::StartApplication()
+void
+WildfireServer::StartApplication ()
 {
   NS_LOG_FUNCTION (this);
 
@@ -94,19 +94,19 @@ WildfireServer::StartApplication()
   m_socket->SetRecvCallback (MakeCallback (&WildfireServer::HandleRead, this));
 }
 
-void 
-WildfireServer::StopApplication()
+void
+WildfireServer::StopApplication ()
 {
   NS_LOG_FUNCTION (this);
 
-  if (m_socket != 0) 
+  if (m_socket != 0)
     {
       m_socket->Close ();
       m_socket->SetRecvCallback (MakeNullCallback<void, Ptr<Socket> > ());
     }
 }
 
-void 
+void
 WildfireServer::ScheduleNotification (Time dt)
 {
   NS_LOG_FUNCTION (this << dt);
@@ -120,11 +120,11 @@ WildfireServer::SendNotification ()
   uint32_t size = 100;
   uint8_t data[100] = "Level1 Alert";
   p = Create<Packet> (data, size);
-  for (auto subscriber = subscribers.begin(); subscriber != subscribers.end(); ++subscriber)
-  {
-    m_socket->SendTo (p, 0, *subscriber);
-    NS_LOG_INFO("Wildfire Notification SENT!");
-  }
+  for (auto subscriber = subscribers.begin (); subscriber != subscribers.end (); ++subscriber)
+    {
+      m_socket->SendTo (p, 0, *subscriber);
+      NS_LOG_INFO ("Wildfire Notification SENT!");
+    }
 }
 
 void
@@ -147,18 +147,18 @@ WildfireServer::HandleRead (Ptr<Socket> socket)
                        InetSocketAddress::ConvertFrom (from).GetPort ());
         }
 
-      uint8_t buffer [100];
+      uint8_t buffer[100];
       uint32_t size = 100;
-      packet->CopyData(buffer, size);
+      packet->CopyData (buffer, size);
       //NS_LOG_INFO(buffer);
       packet->RemoveAllPacketTags ();
       packet->RemoveAllByteTags ();
 
-      if(memcmp(buffer,"Subscribe",9) == 0)
-      {
-        NS_LOG_INFO("Adding Subscriber");
-        subscribers.push_back(from);
-      }
+      if(memcmp (buffer,"Subscribe",9) == 0)
+        {
+          NS_LOG_INFO ("Adding Subscriber");
+          subscribers.push_back (from);
+        }
       //socket->SendTo (packet, 0, from);
 
       if (InetSocketAddress::IsMatchingType (from))

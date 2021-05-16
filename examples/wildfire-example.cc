@@ -29,14 +29,14 @@
 
 //        Network Topology
 // csma star layout internet connection, disrupted at 5s
-// adhoc wifi to allow for transmission between devices 
+// adhoc wifi to allow for transmission between devices
 // when "internet" is unavailable
- 
+
 using namespace ns3;
 
 NS_LOG_COMPONENT_DEFINE ("wildfire example");
 
-void disconnect(Ptr<NetDevice> router);
+void disconnect (Ptr<NetDevice> router);
 
 int
 main (int argc, char *argv[])
@@ -44,9 +44,9 @@ main (int argc, char *argv[])
   uint32_t nPackets = 1;
 
   CommandLine cmd (__FILE__);
-  cmd.AddValue("nPackets", "Number of packets to echo", nPackets);
+  cmd.AddValue ("nPackets", "Number of packets to echo", nPackets);
   cmd.Parse (argc, argv);
-  
+
   Time::SetResolution (Time::NS);
   LogComponentEnable ("WildfireClientApplication", LOG_LEVEL_INFO);
   LogComponentEnable ("WildfireServerApplication", LOG_LEVEL_INFO);
@@ -55,18 +55,18 @@ main (int argc, char *argv[])
 
   // Connected Internet state
   CsmaHelper csma;
-  CsmaStarHelper star(3, csma);
+  CsmaStarHelper star (3, csma);
   InternetStackHelper internet;
-  star.InstallStack(internet);
+  star.InstallStack (internet);
   star.AssignIpv4Addresses (Ipv4AddressHelper ("10.1.1.0", "255.255.255.0"));
 
   // Wifi Related
   NodeContainer wifiNodes;
-  wifiNodes.Add(star.GetSpokeNode(1));
-  wifiNodes.Add(star.GetSpokeNode(2));
+  wifiNodes.Add (star.GetSpokeNode (1));
+  wifiNodes.Add (star.GetSpokeNode (2));
 
   WifiHelper wifi;
-  wifi.SetStandard(WIFI_STANDARD_80211ac);
+  wifi.SetStandard (WIFI_STANDARD_80211ac);
   WifiMacHelper wifiMac;
   YansWifiPhyHelper wifiPhy;
   YansWifiChannelHelper wifiChannel = YansWifiChannelHelper::Default ();
@@ -74,13 +74,13 @@ main (int argc, char *argv[])
 
   wifi.SetRemoteStationManager ("ns3::ConstantRateWifiManager",
                                 "DataMode", StringValue ("OfdmRate54Mbps"));
-  
+
   YansWifiPhyHelper phy = wifiPhy;
   phy.SetChannel (wifiChannel.Create ());
 
   WifiMacHelper mac = wifiMac;
   NetDeviceContainer wifiDevices = wifi.Install (phy, mac, wifiNodes);
-  
+
   MobilityHelper mobility;
   Ptr<ListPositionAllocator> positionAlloc = CreateObject<ListPositionAllocator> ();
   positionAlloc->Add (Vector (0.0, 0.0, 0.0));
@@ -95,34 +95,34 @@ main (int argc, char *argv[])
 
   // Wifi Network
   address.SetBase ("10.2.1.0", "255.255.255.0");
-  address.Assign(wifiDevices);
+  address.Assign (wifiDevices);
 
   WildfireServerHelper echoServer (9);
 
-  ApplicationContainer serverApps = echoServer.Install (star.GetSpokeNode(0));
+  ApplicationContainer serverApps = echoServer.Install (star.GetSpokeNode (0));
   serverApps.Start (Seconds (1.0));
   serverApps.Stop (Seconds (10.0));
-  echoServer.ScheduleNotification(serverApps.Get(0), Seconds(5.0));
+  echoServer.ScheduleNotification (serverApps.Get (0), Seconds (5.0));
 
-  WildfireClientHelper echoClient (star.GetSpokeIpv4Address(0), 9);
+  WildfireClientHelper echoClient (star.GetSpokeIpv4Address (0), 9);
   echoClient.SetAttribute ("MaxPackets", UintegerValue (nPackets));
   echoClient.SetAttribute ("Interval", TimeValue (Seconds (1.0)));
   echoClient.SetAttribute ("PacketSize", UintegerValue (1024));
 
-  ApplicationContainer clientApps = echoClient.Install (star.GetSpokeNode(1));
+  ApplicationContainer clientApps = echoClient.Install (star.GetSpokeNode (1));
   clientApps.Start (Seconds (2.0));
   clientApps.Stop (Seconds (10.0));
-  echoClient.SetFill(clientApps.Get(0), "Subscribe");
+  echoClient.SetFill (clientApps.Get (0), "Subscribe");
 
-  WildfireClientHelper echoClient2 (star.GetSpokeIpv4Address(0), 9);
+  WildfireClientHelper echoClient2 (star.GetSpokeIpv4Address (0), 9);
   echoClient2.SetAttribute ("MaxPackets", UintegerValue (nPackets));
   echoClient2.SetAttribute ("Interval", TimeValue (Seconds (1.0)));
   echoClient2.SetAttribute ("PacketSize", UintegerValue (1024));
 
-  ApplicationContainer clientApps2 = echoClient2.Install (star.GetSpokeNode(2));
+  ApplicationContainer clientApps2 = echoClient2.Install (star.GetSpokeNode (2));
   clientApps2.Start (Seconds (3.0));
   clientApps2.Stop (Seconds (10.0));
-  echoClient2.SetFill(clientApps2.Get(0), "Subscribe");
+  echoClient2.SetFill (clientApps2.Get (0), "Subscribe");
   //echoClient2.SetFill(clientApps2.Get(0), "WIFIMESSAGE");
 
   // This allows for global routing across connection types
@@ -131,16 +131,16 @@ main (int argc, char *argv[])
   AsciiTraceHelper ascii;
   //pointToPoint.EnableAsciiAll (ascii.CreateFileStream ("myfirst.tr"));
 
-  Simulator::Schedule(Seconds(4.0), disconnect, star.GetHub()->GetDevice(1));
+  Simulator::Schedule (Seconds (4.0), disconnect, star.GetHub ()->GetDevice (1));
 
   Simulator::Run ();
   Simulator::Destroy ();
   return 0;
 }
 
-void disconnect(Ptr<NetDevice> router)
+void disconnect (Ptr<NetDevice> router)
 {
-    auto csmaRouter = DynamicCast<CsmaNetDevice, NetDevice> (router);
-    csmaRouter->SetSendEnable(false);
-    NS_LOG_INFO("Network Disconnected");
+  auto csmaRouter = DynamicCast<CsmaNetDevice, NetDevice> (router);
+  csmaRouter->SetSendEnable (false);
+  NS_LOG_INFO ("Network Disconnected");
 }

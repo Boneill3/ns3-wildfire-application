@@ -12,7 +12,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USo
- * 
+ *
  * Author: Brian O'Neill <broneill@pdx.edu>
  */
 
@@ -36,7 +36,7 @@ class Packet;
  *
  * Every packet sent should be returned by the server and received here.
  */
-class WildfireClient : public Application 
+class WildfireClient : public Application
 {
 public:
   /**
@@ -76,8 +76,8 @@ public:
   /**
    * Get the number of data bytes that will be sent to the server.
    *
-   * \warning The number of bytes may be modified by calling any one of the 
-   * SetFill methods.  If you have called SetFill, then the number of 
+   * \warning The number of bytes may be modified by calling any one of the
+   * SetFill methods.  If you have called SetFill, then the number of
    * data bytes will correspond to the size of an initialized data buffer.
    * If you have not called a SetFill method, the number of data bytes will
    * correspond to the number of don't care bytes that will be sent.
@@ -87,7 +87,7 @@ public:
   uint32_t GetDataSize (void) const;
 
   /**
-   * Set the data fill of the packet (what is sent as data to the server) to 
+   * Set the data fill of the packet (what is sent as data to the server) to
    * the zero-terminated contents of the fill string string.
    *
    * \warning The size of resulting echo packets will be automatically adjusted
@@ -99,10 +99,10 @@ public:
   void SetFill (std::string fill);
 
   /**
-   * Set the data fill of the packet (what is sent as data to the server) to 
-   * the repeated contents of the fill byte.  i.e., the fill byte will be 
+   * Set the data fill of the packet (what is sent as data to the server) to
+   * the repeated contents of the fill byte.  i.e., the fill byte will be
    * used to initialize the contents of the data packet.
-   * 
+   *
    * \warning The size of resulting echo packets will be automatically adjusted
    * to reflect the dataSize parameter -- this means that the PacketSize
    * attribute may be changed as a result of this call.
@@ -116,7 +116,7 @@ public:
    * Set the data fill of the packet (what is sent as data to the server) to
    * the contents of the fill buffer, repeated as many times as is required.
    *
-   * Initializing the packet to the contents of a provided single buffer is 
+   * Initializing the packet to the contents of a provided single buffer is
    * accomplished by setting the fillSize set to your desired dataSize
    * (and providing an appropriate buffer).
    *
@@ -176,10 +176,10 @@ private:
 
   /// Callbacks for tracing the packet Rx events
   TracedCallback<Ptr<const Packet> > m_rxTrace;
-  
+
   /// Callbacks for tracing the packet Tx events, includes source and destination addresses
   TracedCallback<Ptr<const Packet>, const Address &, const Address &> m_txTraceWithAddresses;
-  
+
   /// Callbacks for tracing the packet Rx events, includes source and destination addresses
   TracedCallback<Ptr<const Packet>, const Address &, const Address &> m_rxTraceWithAddresses;
 

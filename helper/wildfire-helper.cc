@@ -12,7 +12,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USo
- * 
+ *
  * Author: Brian O'Neill <broneill@pdx.edu>
  */
 #include "wildfire-helper.h"
@@ -34,7 +34,7 @@ void
 WildfireServerHelper::SetAttribute (
   std::string name,
   const AttributeValue &value
-)
+  )
 {
   m_factory.Set (name, value);
 }
@@ -57,9 +57,9 @@ WildfireServerHelper::Install (NodeContainer c) const
 {
   ApplicationContainer apps;
   for (NodeContainer::Iterator i = c.Begin (); i != c.End (); ++i)
-  {
-    apps.Add (InstallPriv (*i));
-  }
+    {
+      apps.Add (InstallPriv (*i));
+    }
 
   return apps;
 }
@@ -76,7 +76,7 @@ WildfireServerHelper::InstallPriv (Ptr<Node> node) const
 void
 WildfireServerHelper::ScheduleNotification (Ptr<Application> app, Time dt)
 {
-  app->GetObject<WildfireServer>()->ScheduleNotification(dt);
+  app->GetObject<WildfireServer>()->ScheduleNotification (dt);
 }
 
 WildfireClientHelper::WildfireClientHelper (Address address, uint16_t port)
@@ -92,9 +92,9 @@ WildfireClientHelper::WildfireClientHelper (Address address)
   SetAttribute ("RemoteAddress", AddressValue (address));
 }
 
-void 
+void
 WildfireClientHelper::SetAttribute (
-  std::string name, 
+  std::string name,
   const AttributeValue &value)
 {
   m_factory.Set (name, value);
