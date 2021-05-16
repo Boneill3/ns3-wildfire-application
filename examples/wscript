@@ -7,6 +7,9 @@ def build(bld):
                                                       'point-to-point',
                                                       'applications',
                                                       'wifi',
-                                                      'mobility'])
+                                                      'mobility',
+                                                      'csma',
+                                                      'csma-layout',
+                                                      'point-to-point-layout'])
     obj.source = 'wildfire-example.cc'
 
