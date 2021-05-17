@@ -117,9 +117,10 @@ void
 WildfireServer::SendNotification ()
 {
   Ptr<Packet> p;
-  uint32_t size = 100;
-  uint8_t data[100] = "Level1 Alert";
-  p = Create<Packet> (data, size);
+  std::string message = std::string ("Level 2 Alert");
+  WildfireMessage alert = WildfireMessage (1,1,&message);
+  auto serialized_alert = alert.serialize ();
+  p = Create<Packet> (serialized_alert->data (), serialized_alert->size ());
   for (auto subscriber = subscribers.begin (); subscriber != subscribers.end (); ++subscriber)
     {
       m_socket->SendTo (p, 0, *subscriber);

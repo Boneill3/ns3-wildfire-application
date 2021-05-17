@@ -11,6 +11,7 @@ def build(bld):
     module.source = [
         'model/wildfire-server.cc',
         'model/wildfire-client.cc',
+        'model/wildfire-message.cc',
         'helper/wildfire-helper.cc',
         ]
 
@@ -29,6 +30,7 @@ def build(bld):
     headers.source = [
         'model/wildfire-server.h',
         'model/wildfire-client.h',
+        'model/wildfire-message.h',
         'helper/wildfire-helper.h',
         ]
 

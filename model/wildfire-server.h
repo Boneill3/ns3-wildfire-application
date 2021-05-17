@@ -23,7 +23,7 @@
 #include "ns3/ptr.h"
 #include "ns3/address.h"
 #include "ns3/traced-callback.h"
-#include <vector>
+#include "wildfire-message.h"
 
 namespace ns3 {
 

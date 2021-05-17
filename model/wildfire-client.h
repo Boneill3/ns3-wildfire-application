@@ -25,6 +25,8 @@
 #include "ns3/ipv4-address.h"
 #include "ns3/traced-callback.h"
 
+#include "wildfire-message.h"
+
 namespace ns3 {
 
 class Socket;
@@ -170,6 +172,10 @@ private:
   uint16_t m_peerPort; //!< Remote peer port
   EventId m_sendEvent; //!< Event to send the next packet
   bool received = false;
+
+  // wildfire related messages
+  std::string m_key; //Key from subscription service
+  std::map <uint32_t, WildfireMessage*>* m_messages;
 
   /// Callbacks for tracing the packet Tx events
   TracedCallback<Ptr<const Packet> > m_txTrace;

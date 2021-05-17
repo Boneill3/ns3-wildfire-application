@@ -12,7 +12,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USo
- * 
+ *
  * Author: Brian O'Neill <broneill@pdx.edu>
  */
 #include "ns3/log.h"
@@ -40,24 +40,24 @@ WildfireClient::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::WildfireClient")
     .SetParent<Application> ()
-    .SetGroupName("Applications")
+    .SetGroupName ("Applications")
     .AddConstructor<WildfireClient> ()
-    .AddAttribute ("MaxPackets", 
+    .AddAttribute ("MaxPackets",
                    "The maximum number of packets the application will send",
                    UintegerValue (100),
                    MakeUintegerAccessor (&WildfireClient::m_count),
                    MakeUintegerChecker<uint32_t> ())
-    .AddAttribute ("Interval", 
+    .AddAttribute ("Interval",
                    "The time to wait between packets",
                    TimeValue (Seconds (1.0)),
                    MakeTimeAccessor (&WildfireClient::m_interval),
                    MakeTimeChecker ())
-    .AddAttribute ("RemoteAddress", 
+    .AddAttribute ("RemoteAddress",
                    "The destination Address of the outbound packets",
                    AddressValue (),
                    MakeAddressAccessor (&WildfireClient::m_peerAddress),
                    MakeAddressChecker ())
-    .AddAttribute ("RemotePort", 
+    .AddAttribute ("RemotePort",
                    "The destination port of the outbound packets",
                    UintegerValue (0),
                    MakeUintegerAccessor (&WildfireClient::m_peerPort),
@@ -91,9 +91,10 @@ WildfireClient::WildfireClient ()
   m_sendEvent = EventId ();
   m_data = 0;
   m_dataSize = 0;
+  m_messages = new std::map<u_int32_t, WildfireMessage*>();
 }
 
-WildfireClient::~WildfireClient()
+WildfireClient::~WildfireClient ()
 {
   NS_LOG_FUNCTION (this);
   m_socket = 0;
@@ -103,7 +104,7 @@ WildfireClient::~WildfireClient()
   m_dataSize = 0;
 }
 
-void 
+void
 WildfireClient::SetRemote (Address ip, uint16_t port)
 {
   NS_LOG_FUNCTION (this << ip << port);
@@ -111,7 +112,7 @@ WildfireClient::SetRemote (Address ip, uint16_t port)
   m_peerPort = port;
 }
 
-void 
+void
 WildfireClient::SetRemote (Address addr)
 {
   NS_LOG_FUNCTION (this << addr);
@@ -125,7 +126,7 @@ WildfireClient::DoDispose (void)
   Application::DoDispose ();
 }
 
-void 
+void
 WildfireClient::StartApplication (void)
 {
   NS_LOG_FUNCTION (this);
@@ -134,21 +135,21 @@ WildfireClient::StartApplication (void)
     {
       TypeId tid = TypeId::LookupByName ("ns3::UdpSocketFactory");
       m_socket = Socket::CreateSocket (GetNode (), tid);
-      if (Ipv4Address::IsMatchingType(m_peerAddress) == true)
+      if (Ipv4Address::IsMatchingType (m_peerAddress) == true)
         {
           if (m_socket->Bind () == -1)
             {
               NS_FATAL_ERROR ("Failed to bind socket");
             }
-          m_socket->Connect (InetSocketAddress (Ipv4Address::ConvertFrom(m_peerAddress), m_peerPort));
+          m_socket->Connect (InetSocketAddress (Ipv4Address::ConvertFrom (m_peerAddress), m_peerPort));
         }
-      else if (Ipv6Address::IsMatchingType(m_peerAddress) == true)
+      else if (Ipv6Address::IsMatchingType (m_peerAddress) == true)
         {
           if (m_socket->Bind6 () == -1)
             {
               NS_FATAL_ERROR ("Failed to bind socket");
             }
-          m_socket->Connect (Inet6SocketAddress (Ipv6Address::ConvertFrom(m_peerAddress), m_peerPort));
+          m_socket->Connect (Inet6SocketAddress (Ipv6Address::ConvertFrom (m_peerAddress), m_peerPort));
         }
       else if (InetSocketAddress::IsMatchingType (m_peerAddress) == true)
         {
@@ -177,12 +178,12 @@ WildfireClient::StartApplication (void)
   ScheduleTransmit (Seconds (0.));
 }
 
-void 
+void
 WildfireClient::StopApplication ()
 {
   NS_LOG_FUNCTION (this);
 
-  if (m_socket != 0) 
+  if (m_socket != 0)
     {
       m_socket->Close ();
       m_socket->SetRecvCallback (MakeNullCallback<void, Ptr<Socket> > ());
@@ -192,14 +193,14 @@ WildfireClient::StopApplication ()
   Simulator::Cancel (m_sendEvent);
 }
 
-void 
+void
 WildfireClient::SetDataSize (uint32_t dataSize)
 {
   NS_LOG_FUNCTION (this << dataSize);
 
   //
   // If the client is setting the echo packet data size this way, we infer
-  // that she doesn't care about the contents of the packet at all, so 
+  // that she doesn't care about the contents of the packet at all, so
   // neither will we.
   //
   delete [] m_data;
@@ -208,14 +209,14 @@ WildfireClient::SetDataSize (uint32_t dataSize)
   m_size = dataSize;
 }
 
-uint32_t 
+uint32_t
 WildfireClient::GetDataSize (void) const
 {
   NS_LOG_FUNCTION (this);
   return m_size;
 }
 
-void 
+void
 WildfireClient::SetFill (std::string fill)
 {
   NS_LOG_FUNCTION (this << fill);
@@ -237,7 +238,7 @@ WildfireClient::SetFill (std::string fill)
   m_size = dataSize;
 }
 
-void 
+void
 WildfireClient::SetFill (uint8_t fill, uint32_t dataSize)
 {
   NS_LOG_FUNCTION (this << fill << dataSize);
@@ -256,7 +257,7 @@ WildfireClient::SetFill (uint8_t fill, uint32_t dataSize)
   m_size = dataSize;
 }
 
-void 
+void
 WildfireClient::SetFill (uint8_t *fill, uint32_t fillSize, uint32_t dataSize)
 {
   NS_LOG_FUNCTION (this << fill << fillSize << dataSize);
@@ -295,14 +296,14 @@ WildfireClient::SetFill (uint8_t *fill, uint32_t fillSize, uint32_t dataSize)
   m_size = dataSize;
 }
 
-void 
+void
 WildfireClient::ScheduleTransmit (Time dt)
 {
   NS_LOG_FUNCTION (this << dt);
   m_sendEvent = Simulator::Schedule (dt, &WildfireClient::Send, this);
 }
 
-void 
+void
 WildfireClient::Send (void)
 {
   NS_LOG_FUNCTION (this);
@@ -370,7 +371,7 @@ WildfireClient::Send (void)
                    Inet6SocketAddress::ConvertFrom (m_peerAddress).GetIpv6 () << " port " << Inet6SocketAddress::ConvertFrom (m_peerAddress).GetPort ());
     }
 
-  if (m_sent < m_count) 
+  if (m_sent < m_count)
     {
       ScheduleTransmit (m_interval);
     }
@@ -401,18 +402,27 @@ WildfireClient::HandleRead (Ptr<Socket> socket)
       m_rxTrace (packet);
       m_rxTraceWithAddresses (packet, from, localAddress);
 
-      uint8_t buffer [100];
-      uint32_t size = 100;
-      packet->CopyData(buffer, size);
-      NS_LOG_INFO(buffer);
+      // Get data from packet
+      uint32_t size = packet->GetSize ();
+      uint8_t buffer[size];
+      packet->CopyData (buffer, size);
 
-      if(!received && memcmp(buffer,"Level1 Alert",12) == 0)
-      {
-        received = true;
-        NS_LOG_INFO("Rebroadcast Over Wifi");
-        m_socket->Connect (InetSocketAddress (Ipv4Address ("255.255.255.255"), 49153)); // why this port?
-        m_socket->Send(packet);
-      }
+      // Store data as application message
+      std::vector<uint8_t> vbuffer (buffer, buffer + sizeof buffer / sizeof buffer[0]);
+      WildfireMessage* message = new WildfireMessage (&vbuffer);
+      m_messages->insert (std::pair<uint32_t, WildfireMessage*> (message->getId (), message));
+
+      auto converted_message = message->toString ();
+      NS_LOG_INFO ("Received message: " << *converted_message);
+      delete converted_message;
+
+      if(!received && message->getMessage()->compare("Level 2 Alert") == 0)
+        {
+          received = true;
+          NS_LOG_INFO ("Rebroadcast Over Wifi");
+          m_socket->Connect (InetSocketAddress (Ipv4Address ("255.255.255.255"), 49153)); // why this port?
+          m_socket->Send (packet);
+        }
     }
 }
 
