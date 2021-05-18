@@ -28,6 +28,7 @@
 namespace ns3
 {
 
+enum WildfireMessageType { error, subscribe, unsubscribe, notification, acknowledgement };
 class WildfireMessage
 {
 private:
@@ -42,7 +43,7 @@ public:
   ~WildfireMessage ();
   uint32_t getId ();
   std::string* getMessage ();
-  std::string* getType ();
+  WildfireMessageType getType ();
   std::string* getHash ();
   std::vector<uint8_t>* serialize ();
   bool isValid (std::string* key);

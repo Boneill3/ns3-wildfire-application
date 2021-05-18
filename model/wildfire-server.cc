@@ -39,6 +39,8 @@ NS_OBJECT_ENSURE_REGISTERED (WildfireServer);
 WildfireServer::WildfireServer ()
 {
   NS_LOG_FUNCTION (this);
+  m_privateKey = new std::string ("PRIVATEKEY");
+  m_publicKey = new std::string ("PUBLICKEY");
 }
 
 WildfireServer::~WildfireServer ()
@@ -124,7 +126,9 @@ WildfireServer::SendNotification ()
   for (auto subscriber = subscribers.begin (); subscriber != subscribers.end (); ++subscriber)
     {
       m_socket->SendTo (p, 0, *subscriber);
-      NS_LOG_INFO ("Wildfire Notification SENT!");
+      NS_LOG_INFO ("Wildfire Notification SENT to " << 
+                    InetSocketAddress::ConvertFrom (*subscriber).GetIpv4 () << " port " <<
+                    InetSocketAddress::ConvertFrom (*subscriber).GetPort ());
     }
 }
 
@@ -148,26 +152,33 @@ WildfireServer::HandleRead (Ptr<Socket> socket)
                        InetSocketAddress::ConvertFrom (from).GetPort ());
         }
 
-      uint8_t buffer[100];
-      uint32_t size = 100;
+      // Get data from packet
+      uint32_t size = packet->GetSize ();
+      uint8_t buffer[size];
       packet->CopyData (buffer, size);
+
+      // convert data to application message
+      std::vector<uint8_t> vbuffer (buffer, buffer + sizeof buffer / sizeof buffer[0]);
+      WildfireMessage* message = new WildfireMessage (&vbuffer);
+
       //NS_LOG_INFO(buffer);
       packet->RemoveAllPacketTags ();
       packet->RemoveAllByteTags ();
 
-      if(memcmp (buffer,"Subscribe",9) == 0)
+      if(message->getType () == WildfireMessageType::subscribe)
         {
           NS_LOG_INFO ("Adding Subscriber");
           subscribers.push_back (from);
-        }
-      //socket->SendTo (packet, 0, from);
 
-      if (InetSocketAddress::IsMatchingType (from))
-        {
-          NS_LOG_INFO ("At time " << Simulator::Now ().As (Time::S) << " server sent " << packet->GetSize () << " bytes to " <<
-                       InetSocketAddress::ConvertFrom (from).GetIpv4 () << " port " <<
-                       InetSocketAddress::ConvertFrom (from).GetPort ());
+          // Send Success Ack
+          Ptr<Packet> ack;
+          WildfireMessage ack_message = WildfireMessage (message->getId (),WildfireMessageType::acknowledgement,m_publicKey);
+          auto serialized_ack = ack_message.serialize ();
+          ack = Create<Packet> (serialized_ack->data (), serialized_ack->size ());
+
+          socket->SendTo (ack, 0, from);
         }
+
     }
 }
 

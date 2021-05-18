@@ -54,6 +54,7 @@ public:
   ApplicationContainer Install (Ptr<Node> node) const;
   ApplicationContainer Install (std::string nodeName) const;
   ApplicationContainer Install (NodeContainer c) const;
+  void ScheduleSubscription(Ptr<Application> app, Time dt, Ipv4Address dest);
 
 private:
   Ptr<Application> InstallPriv (Ptr<Node> node) const;

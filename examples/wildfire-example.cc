@@ -97,14 +97,14 @@ main (int argc, char *argv[])
   address.SetBase ("10.2.1.0", "255.255.255.0");
   address.Assign (wifiDevices);
 
-  WildfireServerHelper echoServer (9);
+  WildfireServerHelper echoServer (202);
 
   ApplicationContainer serverApps = echoServer.Install (star.GetSpokeNode (0));
   serverApps.Start (Seconds (1.0));
   serverApps.Stop (Seconds (10.0));
   echoServer.ScheduleNotification (serverApps.Get (0), Seconds (5.0));
 
-  WildfireClientHelper echoClient (star.GetSpokeIpv4Address (0), 9);
+  WildfireClientHelper echoClient (star.GetSpokeIpv4Address (0), 202);
   echoClient.SetAttribute ("MaxPackets", UintegerValue (nPackets));
   echoClient.SetAttribute ("Interval", TimeValue (Seconds (1.0)));
   echoClient.SetAttribute ("PacketSize", UintegerValue (1024));
@@ -112,9 +112,9 @@ main (int argc, char *argv[])
   ApplicationContainer clientApps = echoClient.Install (star.GetSpokeNode (1));
   clientApps.Start (Seconds (2.0));
   clientApps.Stop (Seconds (10.0));
-  echoClient.SetFill (clientApps.Get (0), "Subscribe");
+  echoClient.ScheduleSubscription (clientApps.Get (0), Seconds (2.5), star.GetSpokeIpv4Address (0));
 
-  WildfireClientHelper echoClient2 (star.GetSpokeIpv4Address (0), 9);
+  WildfireClientHelper echoClient2 (star.GetSpokeIpv4Address (0), 202);
   echoClient2.SetAttribute ("MaxPackets", UintegerValue (nPackets));
   echoClient2.SetAttribute ("Interval", TimeValue (Seconds (1.0)));
   echoClient2.SetAttribute ("PacketSize", UintegerValue (1024));
@@ -122,8 +122,7 @@ main (int argc, char *argv[])
   ApplicationContainer clientApps2 = echoClient2.Install (star.GetSpokeNode (2));
   clientApps2.Start (Seconds (3.0));
   clientApps2.Stop (Seconds (10.0));
-  echoClient2.SetFill (clientApps2.Get (0), "Subscribe");
-  //echoClient2.SetFill(clientApps2.Get(0), "WIFIMESSAGE");
+  //echoClient2.ScheduleSubscription (clientApps2.Get (0), Seconds (3.0), star.GetSpokeIpv4Address (0));
 
   // This allows for global routing across connection types
   Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
@@ -131,7 +130,7 @@ main (int argc, char *argv[])
   AsciiTraceHelper ascii;
   //pointToPoint.EnableAsciiAll (ascii.CreateFileStream ("myfirst.tr"));
 
-  Simulator::Schedule (Seconds (4.0), disconnect, star.GetHub ()->GetDevice (1));
+  //Simulator::Schedule (Seconds (4.0), disconnect, star.GetHub ()->GetDevice (1));
 
   Simulator::Run ();
   Simulator::Destroy ();

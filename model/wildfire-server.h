@@ -66,6 +66,9 @@ private:
 
   std::vector<Address> subscribers;
   EventId m_sendEvent;   //!< Event to send the next packet
+
+  std::string* m_privateKey;
+  std::string* m_publicKey;
 };
 
 } // namespace ns3

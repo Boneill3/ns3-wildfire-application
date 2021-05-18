@@ -416,7 +416,12 @@ WildfireClient::HandleRead (Ptr<Socket> socket)
       NS_LOG_INFO ("Received message: " << *converted_message);
       delete converted_message;
 
-      if(!received && message->getMessage()->compare("Level 2 Alert") == 0)
+      if(message->getType () == WildfireMessageType::acknowledgement)
+        {
+          NS_LOG_INFO ("Ack received");
+        }
+
+      if(!received && message->getMessage ()->compare ("Level 2 Alert") == 0)
         {
           received = true;
           NS_LOG_INFO ("Rebroadcast Over Wifi");
@@ -424,6 +429,32 @@ WildfireClient::HandleRead (Ptr<Socket> socket)
           m_socket->Send (packet);
         }
     }
+}
+
+void
+WildfireClient::ScheduleSubscription (Time dt, Ipv4Address dest)
+{
+  NS_LOG_FUNCTION (this << dt);
+  Simulator::Schedule (dt, &WildfireClient::SendSubscription, this, dest);
+}
+
+void
+WildfireClient::SendSubscription (Ipv4Address dest)
+{
+  // Todo: move send details to seperate function
+  Ptr<Packet> p;
+  std::string message = std::string ("Subscription Request");
+  WildfireMessage alert = WildfireMessage (1,WildfireMessageType::subscribe, &message);
+  auto serialized_alert = alert.serialize ();
+  p = Create<Packet> (serialized_alert->data (), serialized_alert->size ());
+  Address localAddress;
+  m_socket->GetSockName (localAddress);
+  m_txTrace (p);
+  m_txTraceWithAddresses (p, localAddress, InetSocketAddress (Ipv4Address::ConvertFrom (dest), 202));
+  m_socket->Connect (InetSocketAddress (Ipv4Address::ConvertFrom (dest), 202));
+  m_socket->Send(p);
+  
+  NS_LOG_INFO ("Wildfire Subscription Sent to " << dest);
 }
 
 } // Namespace ns3

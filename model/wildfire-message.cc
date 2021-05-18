@@ -83,6 +83,11 @@ std::string* WildfireMessage::getHash ()
   return new std::string (*m_hash);
 }
 
+WildfireMessageType WildfireMessage::getType ()
+{
+  return static_cast<WildfireMessageType>(m_type);
+}
+
 std::vector<uint8_t>* WildfireMessage::serialize ()
 {
   std::string myString = std::to_string (m_id) + '|' + std::to_string (m_type) + '|' + *m_message + '|' + *m_hash;

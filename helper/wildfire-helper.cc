@@ -152,4 +152,10 @@ WildfireClientHelper::InstallPriv (Ptr<Node> node) const
   return app;
 }
 
+void
+WildfireClientHelper::ScheduleSubscription (Ptr<Application> app, Time dt, Ipv4Address dest)
+{
+  app->GetObject<WildfireClient>()->ScheduleSubscription (dt, dest);
+}
+
 } // namespace ns3

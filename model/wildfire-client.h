@@ -132,6 +132,9 @@ public:
    */
   void SetFill (uint8_t *fill, uint32_t fillSize, uint32_t dataSize);
 
+  void ScheduleSubscription(Time dt, Ipv4Address dest);
+  void SendSubscription(Ipv4Address dest);
+
 protected:
   virtual void DoDispose (void);
 
