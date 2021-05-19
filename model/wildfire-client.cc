@@ -418,17 +418,37 @@ WildfireClient::HandleRead (Ptr<Socket> socket)
 
       if(message->getType () == WildfireMessageType::acknowledgement)
         {
-          NS_LOG_INFO ("Ack received");
+          NS_LOG_INFO ("Ack received on client");
         }
 
-      if(!received && message->getMessage ()->compare ("Level 2 Alert") == 0)
+      if(!received && message->getType () == WildfireMessageType::notification)
         {
           received = true;
+          NS_LOG_INFO ("Send Ack to " << InetSocketAddress::ConvertFrom (from).GetIpv4 ());
+          SendAck (socket, &from, message->getId ());
           NS_LOG_INFO ("Rebroadcast Over Wifi");
           m_socket->Connect (InetSocketAddress (Ipv4Address ("255.255.255.255"), 49153)); // why this port?
           m_socket->Send (packet);
         }
     }
+}
+
+void
+WildfireClient::SendAck (Ptr<Socket> socket, Address* dest, uint32_t id )
+{
+  std::string payload = std::string ("");
+  Time expires_at = Time (Simulator::Now () + Hours (1));
+  WildfireMessage message = WildfireMessage (id, WildfireMessageType::acknowledgement, &expires_at, &payload);
+  SendMsg (socket, dest, &message);
+}
+
+void
+WildfireClient::SendMsg (Ptr<Socket> socket, Address* dest, WildfireMessage* message)
+{
+  auto serialized_message = message->serialize ();
+  Ptr<Packet> p = Create<Packet> (serialized_message->data (), serialized_message->size ());
+  m_txTrace (p);
+  socket->SendTo (p, 0, *dest);
 }
 
 void

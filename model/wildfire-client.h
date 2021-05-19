@@ -161,6 +161,9 @@ private:
    * \param socket the socket the packet was received to.
    */
   void HandleRead (Ptr<Socket> socket);
+  
+  void  SendAck (Ptr<Socket> socket, Address* dest, uint32_t id);
+  void  SendMsg (Ptr<Socket> socket, Address* dest, WildfireMessage* message);
 
   uint32_t m_count; //!< Maximum number of packets the application will send
   Time m_interval; //!< Packet inter-send time

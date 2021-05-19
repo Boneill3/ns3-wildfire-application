@@ -120,7 +120,7 @@ WildfireServer::SendNotification ()
 {
   Ptr<Packet> p;
   std::string message = std::string ("Level 2 Alert");
-  Time expires_at = Simulator::Now() + Seconds(30);
+  Time expires_at = Simulator::Now () + Seconds (30);
   WildfireMessage alert = WildfireMessage (1, WildfireMessageType::notification, &expires_at, &message);
   auto serialized_alert = alert.serialize ();
   p = Create<Packet> (serialized_alert->data (), serialized_alert->size ());
@@ -173,12 +173,17 @@ WildfireServer::HandleRead (Ptr<Socket> socket)
 
           // Send Success Ack
           Ptr<Packet> ack;
-          Time expires_at = Simulator::Now() + Seconds(30);
+          Time expires_at = Simulator::Now () + Seconds (30);
           WildfireMessage ack_message = WildfireMessage (message->getId (), WildfireMessageType::acknowledgement, &expires_at, m_publicKey);
           auto serialized_ack = ack_message.serialize ();
           ack = Create<Packet> (serialized_ack->data (), serialized_ack->size ());
 
           socket->SendTo (ack, 0, from);
+        }
+
+      else if (message->getType () == WildfireMessageType::acknowledgement)
+        {
+          NS_LOG_INFO ("Ack Received on Server");
         }
 
     }

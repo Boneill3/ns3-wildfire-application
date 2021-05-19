@@ -122,7 +122,7 @@ main (int argc, char *argv[])
   ApplicationContainer clientApps2 = echoClient2.Install (star.GetSpokeNode (2));
   clientApps2.Start (Seconds (3.0));
   clientApps2.Stop (Seconds (10.0));
-  //echoClient2.ScheduleSubscription (clientApps2.Get (0), Seconds (3.0), star.GetSpokeIpv4Address (0));
+  echoClient2.ScheduleSubscription (clientApps2.Get (0), Seconds (3.5), star.GetSpokeIpv4Address (0));
 
   // This allows for global routing across connection types
   Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
@@ -130,7 +130,13 @@ main (int argc, char *argv[])
   AsciiTraceHelper ascii;
   //pointToPoint.EnableAsciiAll (ascii.CreateFileStream ("myfirst.tr"));
 
+  // Schedule Network Disruption
+  // Server (Internet)
+  //Simulator::Schedule (Seconds (4.0), disconnect, star.GetHub ()->GetDevice (0));
+  // Wireless Device 1
   //Simulator::Schedule (Seconds (4.0), disconnect, star.GetHub ()->GetDevice (1));
+  // Wireless Device 2
+  Simulator::Schedule (Seconds (4.0), disconnect, star.GetHub ()->GetDevice (2));
 
   Simulator::Run ();
   Simulator::Destroy ();
