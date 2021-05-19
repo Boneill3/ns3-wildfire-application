@@ -24,6 +24,7 @@
 #include "ns3/ptr.h"
 #include "ns3/ipv4-address.h"
 #include "ns3/traced-callback.h"
+#include "ns3/core-module.h"
 
 namespace ns3
 {
@@ -36,10 +37,11 @@ private:
   std::string* m_hash;
   std::uint8_t m_type;
   uint32_t m_id;
+  Time* m_expires_at;
 
 public:
   WildfireMessage (std::vector<uint8_t>* data);
-  WildfireMessage (uint32_t id, uint8_t type, std::string* message);
+  WildfireMessage (uint32_t id, uint8_t type, Time* expires_at, std::string* message);
   ~WildfireMessage ();
   uint32_t getId ();
   std::string* getMessage ();
@@ -47,6 +49,7 @@ public:
   std::string* getHash ();
   std::vector<uint8_t>* serialize ();
   bool isValid (std::string* key);
+  bool isExpired ();
   std::string* toString ();
 };
 

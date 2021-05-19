@@ -120,15 +120,16 @@ WildfireServer::SendNotification ()
 {
   Ptr<Packet> p;
   std::string message = std::string ("Level 2 Alert");
-  WildfireMessage alert = WildfireMessage (1,1,&message);
+  Time expires_at = Simulator::Now() + Seconds(30);
+  WildfireMessage alert = WildfireMessage (1, WildfireMessageType::notification, &expires_at, &message);
   auto serialized_alert = alert.serialize ();
   p = Create<Packet> (serialized_alert->data (), serialized_alert->size ());
   for (auto subscriber = subscribers.begin (); subscriber != subscribers.end (); ++subscriber)
     {
       m_socket->SendTo (p, 0, *subscriber);
-      NS_LOG_INFO ("Wildfire Notification SENT to " << 
-                    InetSocketAddress::ConvertFrom (*subscriber).GetIpv4 () << " port " <<
-                    InetSocketAddress::ConvertFrom (*subscriber).GetPort ());
+      NS_LOG_INFO ("Wildfire Notification SENT to " <<
+                   InetSocketAddress::ConvertFrom (*subscriber).GetIpv4 () << " port " <<
+                   InetSocketAddress::ConvertFrom (*subscriber).GetPort ());
     }
 }
 
@@ -172,7 +173,8 @@ WildfireServer::HandleRead (Ptr<Socket> socket)
 
           // Send Success Ack
           Ptr<Packet> ack;
-          WildfireMessage ack_message = WildfireMessage (message->getId (),WildfireMessageType::acknowledgement,m_publicKey);
+          Time expires_at = Simulator::Now() + Seconds(30);
+          WildfireMessage ack_message = WildfireMessage (message->getId (), WildfireMessageType::acknowledgement, &expires_at, m_publicKey);
           auto serialized_ack = ack_message.serialize ();
           ack = Create<Packet> (serialized_ack->data (), serialized_ack->size ());
 

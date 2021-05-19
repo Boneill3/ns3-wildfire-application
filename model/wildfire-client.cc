@@ -444,7 +444,8 @@ WildfireClient::SendSubscription (Ipv4Address dest)
   // Todo: move send details to seperate function
   Ptr<Packet> p;
   std::string message = std::string ("Subscription Request");
-  WildfireMessage alert = WildfireMessage (1,WildfireMessageType::subscribe, &message);
+  Time expires_at = Time (Simulator::Now () + Hours (1));
+  WildfireMessage alert = WildfireMessage (1, WildfireMessageType::subscribe, &expires_at, &message);
   auto serialized_alert = alert.serialize ();
   p = Create<Packet> (serialized_alert->data (), serialized_alert->size ());
   Address localAddress;
@@ -452,8 +453,8 @@ WildfireClient::SendSubscription (Ipv4Address dest)
   m_txTrace (p);
   m_txTraceWithAddresses (p, localAddress, InetSocketAddress (Ipv4Address::ConvertFrom (dest), 202));
   m_socket->Connect (InetSocketAddress (Ipv4Address::ConvertFrom (dest), 202));
-  m_socket->Send(p);
-  
+  m_socket->Send (p);
+
   NS_LOG_INFO ("Wildfire Subscription Sent to " << dest);
 }
 

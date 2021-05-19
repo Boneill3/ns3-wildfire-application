@@ -17,11 +17,6 @@
  */
 
 #include "wildfire-message.h"
-// Message Format
-// 0   - 31  Id (int32)
-// 32  - 33  type (u8)
-// 33  - 122 Message 90 char (string)
-// 123 - 155 hash (128 bits/ 32 characters)
 namespace ns3
 {
 
@@ -39,25 +34,28 @@ WildfireMessage::WildfireMessage (std::vector<uint8_t>* data)
     }
   message.push_back (s);
 
-  if(message.size () != 4)
+  if(message.size () != 5)
     {
       m_message = new std::string (data->begin (), data->end ());
       m_type = 0;
       m_id = 0;
+      m_expires_at = new Time (Simulator::Now ());
       m_hash = new std::string ("");
       return;
     }
 
   m_id = static_cast<uint32_t> (std::stoul (message[0]));
   m_type = static_cast<uint8_t> (std::stoul (message[1]));
-  m_message = new std::string (message[2]);
-  m_hash = new std::string (message[3]);
+  m_expires_at = new Time (message[2]);
+  m_message = new std::string (message[3]);
+  m_hash = new std::string (message[4]);
 }
 
-WildfireMessage::WildfireMessage (uint32_t id, uint8_t type, std::string* message)
+WildfireMessage::WildfireMessage (uint32_t id, uint8_t type, Time* expires_at, std::string* message)
 {
   m_id = id;
   m_type = type;
+  m_expires_at = new Time (*expires_at);
   m_message = new std::string (*message);
   m_hash = new std::string ("12345678901234567890123456789012");
 }
@@ -66,6 +64,7 @@ WildfireMessage::~WildfireMessage ()
 {
   delete m_message;
   delete m_hash;
+  delete m_expires_at;
 }
 
 uint32_t WildfireMessage::getId ()
@@ -85,12 +84,13 @@ std::string* WildfireMessage::getHash ()
 
 WildfireMessageType WildfireMessage::getType ()
 {
-  return static_cast<WildfireMessageType>(m_type);
+  return static_cast<WildfireMessageType> (m_type);
 }
 
 std::vector<uint8_t>* WildfireMessage::serialize ()
 {
-  std::string myString = std::to_string (m_id) + '|' + std::to_string (m_type) + '|' + *m_message + '|' + *m_hash;
+  std::string myString = std::to_string (m_id) + '|' + std::to_string (m_type) + '|' + std::to_string (m_expires_at->ToDouble (Time::Unit::S)) + '|' +
+    *m_message + '|' + *m_hash;
   return new std::vector<uint8_t> (myString.begin (), myString.end ());
 }
 
@@ -99,9 +99,15 @@ bool WildfireMessage::isValid (std::string* key)
   return true;
 }
 
+bool WildfireMessage::isExpired ()
+{
+  return *m_expires_at < Simulator::Now ();
+}
+
 std::string* WildfireMessage::toString ()
 {
-  return new std::string (std::to_string (m_id) + "," + std::to_string (m_type) + "," + *m_message + "," + *m_hash);
+  return new std::string (std::to_string (m_id) + "," + std::to_string (m_type) + "," + std::to_string (m_expires_at->ToDouble (Time::Unit::S)) +
+                          "," + *m_message + "," + *m_hash);
 }
 
 }
