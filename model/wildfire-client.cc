@@ -100,6 +100,11 @@ WildfireClient::~WildfireClient ()
   m_socket = 0;
 
   delete [] m_data;
+  for(std::map<uint32_t, WildfireMessage*>::iterator itr = m_messages->begin (); itr != m_messages->end (); itr++)
+    {
+      delete (itr->second);
+    }
+  delete m_messages;
   m_data = 0;
   m_dataSize = 0;
 }

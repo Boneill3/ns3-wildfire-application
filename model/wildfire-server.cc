@@ -47,6 +47,8 @@ WildfireServer::~WildfireServer ()
 {
   NS_LOG_FUNCTION (this);
   m_socket = 0;
+  delete m_privateKey;
+  delete m_publicKey;
 }
 
 TypeId
@@ -160,13 +162,13 @@ WildfireServer::HandleRead (Ptr<Socket> socket)
 
       // convert data to application message
       std::vector<uint8_t> vbuffer (buffer, buffer + sizeof buffer / sizeof buffer[0]);
-      WildfireMessage* message = new WildfireMessage (&vbuffer);
+      WildfireMessage message = WildfireMessage (&vbuffer);
 
       //NS_LOG_INFO(buffer);
       packet->RemoveAllPacketTags ();
       packet->RemoveAllByteTags ();
 
-      if(message->getType () == WildfireMessageType::subscribe)
+      if(message.getType () == WildfireMessageType::subscribe)
         {
           NS_LOG_INFO ("Adding Subscriber");
           subscribers.push_back (from);
@@ -174,14 +176,14 @@ WildfireServer::HandleRead (Ptr<Socket> socket)
           // Send Success Ack
           Ptr<Packet> ack;
           Time expires_at = Simulator::Now () + Seconds (30);
-          WildfireMessage ack_message = WildfireMessage (message->getId (), WildfireMessageType::acknowledgement, &expires_at, m_publicKey);
+          WildfireMessage ack_message = WildfireMessage (message.getId (), WildfireMessageType::acknowledgement, &expires_at, m_publicKey);
           auto serialized_ack = ack_message.serialize ();
           ack = Create<Packet> (serialized_ack->data (), serialized_ack->size ());
 
           socket->SendTo (ack, 0, from);
         }
 
-      else if (message->getType () == WildfireMessageType::acknowledgement)
+      else if (message.getType () == WildfireMessageType::acknowledgement)
         {
           NS_LOG_INFO ("Ack Received on Server");
         }

@@ -132,8 +132,8 @@ public:
    */
   void SetFill (uint8_t *fill, uint32_t fillSize, uint32_t dataSize);
 
-  void ScheduleSubscription(Time dt, Ipv4Address dest);
-  void SendSubscription(Ipv4Address dest);
+  void ScheduleSubscription (Time dt, Ipv4Address dest);
+  void SendSubscription (Ipv4Address dest);
 
 protected:
   virtual void DoDispose (void);
@@ -161,7 +161,7 @@ private:
    * \param socket the socket the packet was received to.
    */
   void HandleRead (Ptr<Socket> socket);
-  
+
   void  SendAck (Ptr<Socket> socket, Address* dest, uint32_t id);
   void  SendMsg (Ptr<Socket> socket, Address* dest, WildfireMessage* message);
 
