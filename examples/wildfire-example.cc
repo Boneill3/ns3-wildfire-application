@@ -25,6 +25,13 @@
 #include "ns3/csma-layout-module.h"
 #include "ns3/mobility-module.h"
 
+#include "ns3/basic-energy-source.h"
+#include "ns3/wifi-radio-energy-model.h"
+#include "ns3/basic-energy-source-helper.h"
+#include "ns3/wifi-radio-energy-model-helper.h"
+#include "ns3/energy-source-container.h"
+#include "ns3/device-energy-model-container.h"
+
 #include "ns3/wildfire-module.h"
 
 //        Network Topology
@@ -37,6 +44,9 @@ using namespace ns3;
 NS_LOG_COMPONENT_DEFINE ("wildfire example");
 
 void disconnect (Ptr<NetDevice> router);
+
+void RemainingEnergy (double oldValue, double remainingEnergy);
+void TotalEnergy (double oldValue, double totalEnergy);
 
 int
 main (int argc, char *argv[])
@@ -91,6 +101,35 @@ main (int argc, char *argv[])
   mobility.Install (wifiNodes);
   //End wifi related
 
+  /** Energy Model **/
+  /***************************************************************************/
+  /* energy source */
+  BasicEnergySourceHelper basicSourceHelper;
+  // configure energy source
+  basicSourceHelper.Set ("BasicEnergySourceInitialEnergyJ", DoubleValue (1000.0));
+  // install source
+  EnergySourceContainer sources = basicSourceHelper.Install (wifiNodes);
+  /* device energy model */
+  WifiRadioEnergyModelHelper radioEnergyHelper;
+  // configure radio energy model
+  radioEnergyHelper.Set ("TxCurrentA", DoubleValue (0.0174));
+  // install device model
+  DeviceEnergyModelContainer deviceModels = radioEnergyHelper.Install (wifiDevices, sources);
+  /***************************************************************************/
+
+  /** connect trace sources **/
+  /***************************************************************************/
+  // all sources are connected to node 1
+  // energy source
+  Ptr<BasicEnergySource> basicSourcePtr = DynamicCast<BasicEnergySource> (sources.Get (1));
+  basicSourcePtr->TraceConnectWithoutContext ("RemainingEnergy", MakeCallback (&RemainingEnergy));
+  // device energy model
+  Ptr<DeviceEnergyModel> basicRadioModelPtr =
+    basicSourcePtr->FindDeviceEnergyModels ("ns3::WifiRadioEnergyModel").Get (0);
+  NS_ASSERT (basicRadioModelPtr != NULL);
+  basicRadioModelPtr->TraceConnectWithoutContext ("TotalEnergyConsumption", MakeCallback (&TotalEnergy));
+  /***************************************************************************/
+
   Ipv4AddressHelper address;
 
   // Wifi Network
@@ -138,7 +177,18 @@ main (int argc, char *argv[])
   // Wireless Device 2
   Simulator::Schedule (Seconds (4.0), disconnect, star.GetHub ()->GetDevice (2));
 
+  // Simulator must be stopped when using energy
+  Simulator::Stop (Seconds (10.0));
+
   Simulator::Run ();
+
+  for (DeviceEnergyModelContainer::Iterator iter = deviceModels.Begin (); iter != deviceModels.End (); iter++)
+    {
+      double energyConsumed = (*iter)->GetTotalEnergyConsumption ();
+      NS_LOG_INFO ("End of simulation (" << Simulator::Now ().GetSeconds ()
+                                           << "s) Total energy consumed by radio = " << energyConsumed << "J");
+    }
+
   Simulator::Destroy ();
   return 0;
 }
@@ -148,4 +198,20 @@ void disconnect (Ptr<NetDevice> router)
   auto csmaRouter = DynamicCast<CsmaNetDevice, NetDevice> (router);
   csmaRouter->SetSendEnable (false);
   NS_LOG_INFO ("Network Disconnected");
+}
+
+/// Trace function for remaining energy at node.
+void
+RemainingEnergy (double oldValue, double remainingEnergy)
+{
+  NS_LOG_DEBUG (Simulator::Now ().GetSeconds ()
+                 << "s Current remaining energy = " << remainingEnergy << "J");
+}
+
+/// Trace function for total energy consumption at node.
+void
+TotalEnergy (double oldValue, double totalEnergy)
+{
+  NS_LOG_DEBUG (Simulator::Now ().GetSeconds ()
+                 << "s Total energy consumed by radio = " << totalEnergy << "J");
 }
