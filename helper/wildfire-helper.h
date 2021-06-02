@@ -48,9 +48,6 @@ public:
   WildfireClientHelper (Address ip, uint16_t port);
   WildfireClientHelper (Address addr);
   void SetAttribute (std::string name, const AttributeValue &value);
-  void SetFill (Ptr<Application> app, std::string fill);
-  void SetFill (Ptr<Application> app, uint8_t fill, uint32_t dataLength);
-  void SetFill (Ptr<Application> app, uint8_t *fill, uint32_t fillLength, uint32_t dataLength);
   ApplicationContainer Install (Ptr<Node> node) const;
   ApplicationContainer Install (std::string nodeName) const;
   ApplicationContainer Install (NodeContainer c) const;

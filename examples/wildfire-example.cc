@@ -145,9 +145,6 @@ main (int argc, char *argv[])
   echoServer.ScheduleNotification (serverApps.Get (0), Seconds (5.0));
 
   WildfireClientHelper echoClient (star.GetSpokeIpv4Address (0), 202);
-  echoClient.SetAttribute ("MaxPackets", UintegerValue (nPackets));
-  echoClient.SetAttribute ("Interval", TimeValue (Seconds (1.0)));
-  echoClient.SetAttribute ("PacketSize", UintegerValue (1024));
   echoClient.SetAttribute ("BroadcastInterval", TimeValue (Seconds(2.0)));
 
   ApplicationContainer clientApps = echoClient.Install (star.GetSpokeNode (1));
@@ -156,9 +153,6 @@ main (int argc, char *argv[])
   echoClient.ScheduleSubscription (clientApps.Get (0), Seconds (2.5), star.GetSpokeIpv4Address (0));
 
   WildfireClientHelper echoClient2 (star.GetSpokeIpv4Address (0), 202);
-  echoClient2.SetAttribute ("MaxPackets", UintegerValue (nPackets));
-  echoClient2.SetAttribute ("Interval", TimeValue (Seconds (1.0)));
-  echoClient2.SetAttribute ("PacketSize", UintegerValue (1024));
   echoClient2.SetAttribute ("BroadcastInterval", TimeValue (Seconds(2.0)));
 
   ApplicationContainer clientApps2 = echoClient2.Install (star.GetSpokeNode (2));

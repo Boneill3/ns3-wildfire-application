@@ -100,24 +100,6 @@ WildfireClientHelper::SetAttribute (
   m_factory.Set (name, value);
 }
 
-void
-WildfireClientHelper::SetFill (Ptr<Application> app, std::string fill)
-{
-  app->GetObject<WildfireClient>()->SetFill (fill);
-}
-
-void
-WildfireClientHelper::SetFill (Ptr<Application> app, uint8_t fill, uint32_t dataLength)
-{
-  app->GetObject<WildfireClient>()->SetFill (fill, dataLength);
-}
-
-void
-WildfireClientHelper::SetFill (Ptr<Application> app, uint8_t *fill, uint32_t fillLength, uint32_t dataLength)
-{
-  app->GetObject<WildfireClient>()->SetFill (fill, fillLength, dataLength);
-}
-
 ApplicationContainer
 WildfireClientHelper::Install (Ptr<Node> node) const
 {
