@@ -67,6 +67,11 @@ WildfireClient::GetTypeId (void)
                    MakeUintegerAccessor (&WildfireClient::SetDataSize,
                                          &WildfireClient::GetDataSize),
                    MakeUintegerChecker<uint32_t> ())
+    .AddAttribute ("BroadcastInterval",
+                   "The time to wait between broadcasts",
+                   TimeValue (Seconds (1.0)),
+                   MakeTimeAccessor (&WildfireClient::m_broadcast_interval),
+                   MakeTimeChecker ())
     .AddTraceSource ("Tx", "A new packet is created and is sent",
                      MakeTraceSourceAccessor (&WildfireClient::m_txTrace),
                      "ns3::Packet::TracedCallback")
@@ -92,6 +97,7 @@ WildfireClient::WildfireClient ()
   m_data = 0;
   m_dataSize = 0;
   m_messages = new std::map<u_int32_t, WildfireMessage*>();
+  m_id = rand() % UINT32_MAX;
 }
 
 WildfireClient::~WildfireClient ()
@@ -423,19 +429,51 @@ WildfireClient::HandleRead (Ptr<Socket> socket)
 
       if(message->getType () == WildfireMessageType::acknowledgement)
         {
+          if(from == m_peerAddress)
+            {
+              if(m_key != nullptr)
+                {
+                  delete m_key;
+                }
+
+              m_key = message->getMessage ();
+            }
           NS_LOG_INFO ("Ack received on client");
         }
 
-      if(!received && message->getType () == WildfireMessageType::notification)
+      if(!m_received && message->getType () == WildfireMessageType::notification
+         && message->isValid (m_key) && !message->isExpired ())
         {
-          received = true;
+          m_received = true;
           NS_LOG_INFO ("Send Ack to " << InetSocketAddress::ConvertFrom (from).GetIpv4 ());
           SendAck (socket, &from, message->getId ());
-          NS_LOG_INFO ("Rebroadcast Over Wifi");
-          m_socket->Connect (InetSocketAddress (Ipv4Address ("255.255.255.255"), 49153)); // why this port?
-          m_socket->Send (packet);
+          Broadcast ();
         }
     }
+}
+
+void
+WildfireClient::Broadcast ()
+{
+  Ptr<Packet> packet;
+  bool found = false;
+  NS_LOG_DEBUG ("At time " << Simulator::Now ().As (Time::S) << " Rebroadcast Over Wifi");
+  for(auto itr = m_messages->begin (); itr != m_messages->end (); itr++)
+    {
+      if (itr->second->getType () == WildfireMessageType::notification
+          && !itr->second->isExpired ())
+        {
+          Address dest = InetSocketAddress (Ipv4Address ("255.255.255.255"), 49153);
+          SendMsg (m_socket, &dest, itr->second);
+        }
+      found = true;
+    }
+
+  if (found)
+    {
+      Simulator::Schedule (m_broadcast_interval, &WildfireClient::Broadcast, this);
+    }
+
 }
 
 void
@@ -470,7 +508,8 @@ WildfireClient::SendSubscription (Ipv4Address dest)
   Ptr<Packet> p;
   std::string message = std::string ("Subscription Request");
   Time expires_at = Time (Simulator::Now () + Hours (1));
-  WildfireMessage alert = WildfireMessage (1, WildfireMessageType::subscribe, &expires_at, &message);
+  WildfireMessage alert = WildfireMessage (m_id, WildfireMessageType::subscribe, &expires_at, &message);
+  m_id++;
   auto serialized_alert = alert.serialize ();
   p = Create<Packet> (serialized_alert->data (), serialized_alert->size ());
   Address localAddress;

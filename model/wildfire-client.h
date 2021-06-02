@@ -164,6 +164,7 @@ private:
 
   void  SendAck (Ptr<Socket> socket, Address* dest, uint32_t id);
   void  SendMsg (Ptr<Socket> socket, Address* dest, WildfireMessage* message);
+  void  Broadcast ();
 
   uint32_t m_count; //!< Maximum number of packets the application will send
   Time m_interval; //!< Packet inter-send time
@@ -177,10 +178,12 @@ private:
   Address m_peerAddress; //!< Remote peer address
   uint16_t m_peerPort; //!< Remote peer port
   EventId m_sendEvent; //!< Event to send the next packet
-  bool received = false;
+  bool m_received = false;
+  Time m_broadcast_interval;
+  uint32_t m_id = 0;
 
   // wildfire related messages
-  std::string m_key; //Key from subscription service
+  std::string *m_key = nullptr; //Key from subscription service
   std::map <uint32_t, WildfireMessage*>* m_messages;
 
   /// Callbacks for tracing the packet Tx events

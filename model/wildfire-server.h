@@ -69,6 +69,7 @@ private:
 
   std::string* m_privateKey;
   std::string* m_publicKey;
+  uint32_t id = 0;
 };
 
 } // namespace ns3

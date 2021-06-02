@@ -106,13 +106,14 @@ main (int argc, char *argv[])
   /* energy source */
   BasicEnergySourceHelper basicSourceHelper;
   // configure energy source
-  basicSourceHelper.Set ("BasicEnergySourceInitialEnergyJ", DoubleValue (1000.0));
+  basicSourceHelper.Set ("BasicEnergySourceInitialEnergyJ", DoubleValue (100));
   // install source
   EnergySourceContainer sources = basicSourceHelper.Install (wifiNodes);
   /* device energy model */
   WifiRadioEnergyModelHelper radioEnergyHelper;
   // configure radio energy model
   radioEnergyHelper.Set ("TxCurrentA", DoubleValue (0.0174));
+  radioEnergyHelper.Set ("RxCurrentA", DoubleValue (0.0197));
   // install device model
   DeviceEnergyModelContainer deviceModels = radioEnergyHelper.Install (wifiDevices, sources);
   /***************************************************************************/
@@ -147,6 +148,7 @@ main (int argc, char *argv[])
   echoClient.SetAttribute ("MaxPackets", UintegerValue (nPackets));
   echoClient.SetAttribute ("Interval", TimeValue (Seconds (1.0)));
   echoClient.SetAttribute ("PacketSize", UintegerValue (1024));
+  echoClient.SetAttribute ("BroadcastInterval", TimeValue (Seconds(2.0)));
 
   ApplicationContainer clientApps = echoClient.Install (star.GetSpokeNode (1));
   clientApps.Start (Seconds (2.0));
@@ -157,6 +159,7 @@ main (int argc, char *argv[])
   echoClient2.SetAttribute ("MaxPackets", UintegerValue (nPackets));
   echoClient2.SetAttribute ("Interval", TimeValue (Seconds (1.0)));
   echoClient2.SetAttribute ("PacketSize", UintegerValue (1024));
+  echoClient2.SetAttribute ("BroadcastInterval", TimeValue (Seconds(2.0)));
 
   ApplicationContainer clientApps2 = echoClient2.Install (star.GetSpokeNode (2));
   clientApps2.Start (Seconds (3.0));
@@ -185,7 +188,7 @@ main (int argc, char *argv[])
   for (DeviceEnergyModelContainer::Iterator iter = deviceModels.Begin (); iter != deviceModels.End (); iter++)
     {
       double energyConsumed = (*iter)->GetTotalEnergyConsumption ();
-      NS_LOG_INFO ("End of simulation (" << Simulator::Now ().GetSeconds ()
+      NS_LOG_UNCOND ("End of simulation (" << Simulator::Now ().GetSeconds ()
                                            << "s) Total energy consumed by radio = " << energyConsumed << "J");
     }
 
@@ -204,7 +207,7 @@ void disconnect (Ptr<NetDevice> router)
 void
 RemainingEnergy (double oldValue, double remainingEnergy)
 {
-  NS_LOG_DEBUG (Simulator::Now ().GetSeconds ()
+  NS_LOG_INFO (Simulator::Now ().GetSeconds ()
                  << "s Current remaining energy = " << remainingEnergy << "J");
 }
 
@@ -212,6 +215,6 @@ RemainingEnergy (double oldValue, double remainingEnergy)
 void
 TotalEnergy (double oldValue, double totalEnergy)
 {
-  NS_LOG_DEBUG (Simulator::Now ().GetSeconds ()
+  NS_LOG_INFO (Simulator::Now ().GetSeconds ()
                  << "s Total energy consumed by radio = " << totalEnergy << "J");
 }

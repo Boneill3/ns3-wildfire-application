@@ -123,7 +123,8 @@ WildfireServer::SendNotification ()
   Ptr<Packet> p;
   std::string message = std::string ("Level 2 Alert");
   Time expires_at = Simulator::Now () + Seconds (30);
-  WildfireMessage alert = WildfireMessage (1, WildfireMessageType::notification, &expires_at, &message);
+  WildfireMessage alert = WildfireMessage (id, WildfireMessageType::notification, &expires_at, &message);
+  id++;
   auto serialized_alert = alert.serialize ();
   p = Create<Packet> (serialized_alert->data (), serialized_alert->size ());
   for (auto subscriber = subscribers.begin (); subscriber != subscribers.end (); ++subscriber)
