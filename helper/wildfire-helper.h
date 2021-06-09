@@ -45,8 +45,8 @@ class WildfireClientHelper
 {
 public:
 
-  WildfireClientHelper (Address ip, uint16_t port);
-  WildfireClientHelper (Address addr);
+  WildfireClientHelper (Address ip, uint16_t remotePort, u_int16_t port);
+  WildfireClientHelper (Address addr, uint16_t port);
   void SetAttribute (std::string name, const AttributeValue &value);
   ApplicationContainer Install (Ptr<Node> node) const;
   ApplicationContainer Install (std::string nodeName) const;

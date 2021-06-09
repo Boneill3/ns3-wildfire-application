@@ -52,6 +52,10 @@ WildfireClient::GetTypeId (void)
                    UintegerValue (0),
                    MakeUintegerAccessor (&WildfireClient::m_peerPort),
                    MakeUintegerChecker<uint16_t> ())
+    .AddAttribute ("Port", "Port on which we listen for incoming packets.",
+                   UintegerValue (9),
+                   MakeUintegerAccessor (&WildfireClient::m_port),
+                   MakeUintegerChecker<uint16_t> ())
     .AddAttribute ("BroadcastInterval",
                    "The time to wait between broadcasts",
                    TimeValue (Seconds (1.0)),
@@ -126,10 +130,14 @@ WildfireClient::StartApplication (void)
       m_socket = Socket::CreateSocket (GetNode (), tid);
       if (Ipv4Address::IsMatchingType (m_peerAddress) == true)
         {
-          if (m_socket->Bind () == -1)
+          // Listen for any connection on wildfire port
+          InetSocketAddress local = InetSocketAddress (Ipv4Address::GetAny (), m_port);
+          if (m_socket->Bind (local) == -1)
             {
               NS_FATAL_ERROR ("Failed to bind socket");
             }
+          
+          // TODO: Move connect to subscribe function
           m_socket->Connect (InetSocketAddress (Ipv4Address::ConvertFrom (m_peerAddress), m_peerPort));
         }
       else
@@ -228,7 +236,7 @@ WildfireClient::Broadcast ()
       if (itr->second->getType () == WildfireMessageType::notification
           && !itr->second->isExpired ())
         {
-          Address dest = InetSocketAddress (Ipv4Address ("255.255.255.255"), 49153);
+          Address dest = InetSocketAddress (Ipv4Address ("255.255.255.255"), m_port);
           SendMsg (m_socket, &dest, itr->second);
         }
       found = true;

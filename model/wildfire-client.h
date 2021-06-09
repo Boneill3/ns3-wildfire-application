@@ -86,6 +86,7 @@ private:
   bool m_received = false;
   Time m_broadcast_interval;
   uint32_t m_id = 0;
+  uint16_t m_port;   //!< Port on which we listen for incoming packets.
 
   // wildfire related messages
   std::string *m_key = nullptr; //Key from subscription service

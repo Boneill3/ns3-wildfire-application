@@ -79,17 +79,19 @@ WildfireServerHelper::ScheduleNotification (Ptr<Application> app, Time dt)
   app->GetObject<WildfireServer>()->ScheduleNotification (dt);
 }
 
+WildfireClientHelper::WildfireClientHelper (Address address, uint16_t remotePort, uint16_t port)
+{
+  m_factory.SetTypeId (WildfireClient::GetTypeId ());
+  SetAttribute ("RemoteAddress", AddressValue (address));
+  SetAttribute ("RemotePort", UintegerValue (remotePort));
+  SetAttribute ("Port", UintegerValue (port));
+}
+
 WildfireClientHelper::WildfireClientHelper (Address address, uint16_t port)
 {
   m_factory.SetTypeId (WildfireClient::GetTypeId ());
   SetAttribute ("RemoteAddress", AddressValue (address));
-  SetAttribute ("RemotePort", UintegerValue (port));
-}
-
-WildfireClientHelper::WildfireClientHelper (Address address)
-{
-  m_factory.SetTypeId (WildfireClient::GetTypeId ());
-  SetAttribute ("RemoteAddress", AddressValue (address));
+  SetAttribute ("Port", UintegerValue (port));
 }
 
 void
