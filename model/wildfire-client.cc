@@ -63,7 +63,7 @@ WildfireClient::GetTypeId (void)
                    MakeTimeChecker ())
     .AddTraceSource ("Tx", "A new packet is created and is sent",
                      MakeTraceSourceAccessor (&WildfireClient::m_txTrace),
-                     "ns3::Packet::TracedCallback")
+                     "")
     .AddTraceSource ("Rx", "A packet has been received",
                      MakeTraceSourceAccessor (&WildfireClient::m_rxTrace),
                      "ns3::Packet::TracedCallback")
@@ -73,6 +73,9 @@ WildfireClient::GetTypeId (void)
     .AddTraceSource ("RxWithAddresses", "A packet has been received",
                      MakeTraceSourceAccessor (&WildfireClient::m_rxTraceWithAddresses),
                      "ns3::Packet::TwoAddressTracedCallback")
+    .AddTraceSource ("RxNotification", "A Notification has been received",
+                     MakeTraceSourceAccessor (&WildfireClient::m_rxNotification),
+                     "")
   ;
   return tid;
 }
@@ -82,7 +85,7 @@ WildfireClient::WildfireClient ()
   NS_LOG_FUNCTION (this);
   m_socket = 0;
   m_messages = new std::map<u_int32_t, WildfireMessage*>();
-  m_id = rand() % UINT32_MAX;
+  m_id = rand () % UINT32_MAX;
 }
 
 WildfireClient::~WildfireClient ()
@@ -136,7 +139,7 @@ WildfireClient::StartApplication (void)
             {
               NS_FATAL_ERROR ("Failed to bind socket");
             }
-          
+
           // TODO: Move connect to subscribe function
           m_socket->Connect (InetSocketAddress (Ipv4Address::ConvertFrom (m_peerAddress), m_peerPort));
         }
@@ -180,7 +183,7 @@ WildfireClient::HandleRead (Ptr<Socket> socket)
                        InetSocketAddress::ConvertFrom (from).GetIpv4 () << " port " <<
                        InetSocketAddress::ConvertFrom (from).GetPort ());
         }
-      
+
       socket->GetSockName (localAddress);
       m_rxTrace (packet);
       m_rxTraceWithAddresses (packet, from, localAddress);
@@ -217,6 +220,7 @@ WildfireClient::HandleRead (Ptr<Socket> socket)
       if(!m_received && message->getType () == WildfireMessageType::notification
          && message->isValid (m_key) && !message->isExpired ())
         {
+          m_rxNotification ();
           m_received = true;
           NS_LOG_INFO ("Send Ack to " << InetSocketAddress::ConvertFrom (from).GetIpv4 ());
           SendAck (socket, &from, message->getId ());
@@ -263,7 +267,7 @@ WildfireClient::SendMsg (Ptr<Socket> socket, Address* dest, WildfireMessage* mes
 {
   auto serialized_message = message->serialize ();
   Ptr<Packet> p = Create<Packet> (serialized_message->data (), serialized_message->size ());
-  m_txTrace (p);
+  m_txTrace ();
   socket->SendTo (p, 0, *dest);
 }
 
@@ -287,7 +291,7 @@ WildfireClient::SendSubscription (Ipv4Address dest)
   p = Create<Packet> (serialized_alert->data (), serialized_alert->size ());
   Address localAddress;
   m_socket->GetSockName (localAddress);
-  m_txTrace (p);
+  m_txTrace ();
   m_txTraceWithAddresses (p, localAddress, InetSocketAddress (Ipv4Address::ConvertFrom (dest), 202));
   m_socket->Connect (InetSocketAddress (Ipv4Address::ConvertFrom (dest), 202));
   m_socket->Send (p);

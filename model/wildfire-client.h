@@ -82,7 +82,7 @@ private:
   Address m_peerAddress; //!< Remote peer address
   uint16_t m_peerPort; //!< Remote peer port
   EventId m_sendEvent; //!< Event to send the next packet
-  EventId m_broadcastEvent;; //!< Event to send the next broadcast packet
+  EventId m_broadcastEvent;  //!< Event to send the next broadcast packet
   bool m_received = false;
   Time m_broadcast_interval;
   uint32_t m_id = 0;
@@ -93,7 +93,7 @@ private:
   std::map <uint32_t, WildfireMessage*>* m_messages;
 
   /// Callbacks for tracing the packet Tx events
-  TracedCallback<Ptr<const Packet> > m_txTrace;
+  TracedCallback<> m_txTrace;
 
   /// Callbacks for tracing the packet Rx events
   TracedCallback<Ptr<const Packet> > m_rxTrace;
@@ -103,6 +103,9 @@ private:
 
   /// Callbacks for tracing the packet Rx events, includes source and destination addresses
   TracedCallback<Ptr<const Packet>, const Address &, const Address &> m_rxTraceWithAddresses;
+
+  /// Callback for wildfire notification received
+  TracedCallback<> m_rxNotification;
 
 };
 

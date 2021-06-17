@@ -54,6 +54,7 @@ private:
    * \param socket the socket the packet was received to.
    */
   void HandleRead (Ptr<Socket> socket);
+  void  SendMsg (Ptr<Socket> socket, Address* dest, WildfireMessage* message);
 
   uint16_t m_port;   //!< Port on which we listen for incoming packets.
   Ptr<Socket> m_socket;   //!< IPv4 Socket
@@ -63,6 +64,12 @@ private:
 
   /// Callbacks for tracing the packet Rx events, includes source and destination addresses
   TracedCallback<Ptr<const Packet>, const Address &, const Address &> m_rxTraceWithAddresses;
+
+  /// Callbacks for tracing the packet Tx events
+  TracedCallback<> m_txTrace;
+
+  /// Callbacks for tracing the received ack events
+  TracedCallback<> m_ackTrace;
 
   std::vector<Address> subscribers;
   EventId m_sendEvent;   //!< Event to send the next packet

@@ -68,6 +68,12 @@ WildfireServer::GetTypeId ()
     .AddTraceSource ("RxWithAddresses", "A packet has been received",
                      MakeTraceSourceAccessor (&WildfireServer::m_rxTraceWithAddresses),
                      "ns3::Packet::TwoAddressTracedCallback")
+    .AddTraceSource ("Tx", "A packet has been sent",
+                     MakeTraceSourceAccessor (&WildfireServer::m_txTrace),
+                     "")
+    .AddTraceSource ("Ack", "An Ack packet has been received",
+                     MakeTraceSourceAccessor (&WildfireServer::m_ackTrace),
+                     "")
   ;
   return tid;
 }
@@ -125,11 +131,9 @@ WildfireServer::SendNotification ()
   Time expires_at = Simulator::Now () + Seconds (30);
   WildfireMessage alert = WildfireMessage (id, WildfireMessageType::notification, &expires_at, &message);
   id++;
-  auto serialized_alert = alert.serialize ();
-  p = Create<Packet> (serialized_alert->data (), serialized_alert->size ());
   for (auto subscriber = subscribers.begin (); subscriber != subscribers.end (); ++subscriber)
     {
-      m_socket->SendTo (p, 0, *subscriber);
+      SendMsg (m_socket, &(*subscriber), &alert);
       NS_LOG_INFO ("Wildfire Notification SENT to " <<
                    InetSocketAddress::ConvertFrom (*subscriber).GetIpv4 () << " port " <<
                    InetSocketAddress::ConvertFrom (*subscriber).GetPort ());
@@ -178,18 +182,25 @@ WildfireServer::HandleRead (Ptr<Socket> socket)
           Ptr<Packet> ack;
           Time expires_at = Simulator::Now () + Seconds (30);
           WildfireMessage ack_message = WildfireMessage (message.getId (), WildfireMessageType::acknowledgement, &expires_at, m_publicKey);
-          auto serialized_ack = ack_message.serialize ();
-          ack = Create<Packet> (serialized_ack->data (), serialized_ack->size ());
-
-          socket->SendTo (ack, 0, from);
+          SendMsg (socket, &from, &ack_message);
         }
 
       else if (message.getType () == WildfireMessageType::acknowledgement)
         {
+          m_ackTrace ();
           NS_LOG_INFO ("Ack Received on Server");
         }
 
     }
+}
+
+void
+WildfireServer::SendMsg (Ptr<Socket> socket, Address* dest, WildfireMessage* message)
+{
+  auto serialized_message = message->serialize ();
+  Ptr<Packet> p = Create<Packet> (serialized_message->data (), serialized_message->size ());
+  m_txTrace ();
+  socket->SendTo (p, 0, *dest);
 }
 
 } // Namespace ns3

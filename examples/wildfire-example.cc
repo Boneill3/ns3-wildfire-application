@@ -45,8 +45,17 @@ NS_LOG_COMPONENT_DEFINE ("wildfire example");
 
 void disconnect (Ptr<NetDevice> router);
 
-void RemainingEnergy (double oldValue, double remainingEnergy);
-void TotalEnergy (double oldValue, double totalEnergy);
+void RemainingEnergy (Ptr<OutputStreamWrapper> stream, double oldValue, double remainingEnergy);
+void TotalEnergy (Ptr<OutputStreamWrapper> stream, double oldValue, double totalEnergy);
+static void LogRecieved (Ptr<OutputStreamWrapper> stream);
+static void LogSent (Ptr<OutputStreamWrapper> stream);
+static void LogAck (Ptr<OutputStreamWrapper> stream);
+
+uint64_t notifications_received = 0;
+uint64_t total_sent_messages = 0;
+uint64_t total_notification_acks = 0;
+double total_power = 0;
+uint64_t total_dead_battery = 0;
 
 int
 main (int argc, char *argv[])
@@ -58,8 +67,8 @@ main (int argc, char *argv[])
   cmd.Parse (argc, argv);
 
   Time::SetResolution (Time::NS);
-  LogComponentEnable ("WildfireClientApplication", LOG_LEVEL_INFO);
-  LogComponentEnable ("WildfireServerApplication", LOG_LEVEL_INFO);
+  //LogComponentEnable ("WildfireClientApplication", LOG_LEVEL_INFO);
+  //LogComponentEnable ("WildfireServerApplication", LOG_LEVEL_INFO);
 
   NS_LOG_INFO ("Creating Topology");
 
@@ -122,13 +131,20 @@ main (int argc, char *argv[])
   /***************************************************************************/
   // all sources are connected to node 1
   // energy source
-  Ptr<BasicEnergySource> basicSourcePtr = DynamicCast<BasicEnergySource> (sources.Get (1));
-  basicSourcePtr->TraceConnectWithoutContext ("RemainingEnergy", MakeCallback (&RemainingEnergy));
-  // device energy model
-  Ptr<DeviceEnergyModel> basicRadioModelPtr =
-    basicSourcePtr->FindDeviceEnergyModels ("ns3::WifiRadioEnergyModel").Get (0);
-  NS_ASSERT (basicRadioModelPtr != NULL);
-  basicRadioModelPtr->TraceConnectWithoutContext ("TotalEnergyConsumption", MakeCallback (&TotalEnergy));
+  AsciiTraceHelper asciiTraceHelper2;
+  Ptr<OutputStreamWrapper> stream2 = asciiTraceHelper2.CreateFileStream ("NoPowerCount.dat");
+
+  for (int i = 0; i < sources.GetN (); ++i)
+    {
+      Ptr<BasicEnergySource> basicSourcePtr = DynamicCast<BasicEnergySource> (sources.Get (i));
+      basicSourcePtr->TraceConnectWithoutContext ("RemainingEnergy", MakeBoundCallback (&RemainingEnergy, stream2));
+      // device energy model
+      Ptr<DeviceEnergyModel> basicRadioModelPtr =
+        basicSourcePtr->FindDeviceEnergyModels ("ns3::WifiRadioEnergyModel").Get (0);
+      NS_ASSERT (basicRadioModelPtr != NULL);
+      Ptr<OutputStreamWrapper> stream2 = asciiTraceHelper2.CreateFileStream ("TotalPowerCount.dat");
+      basicRadioModelPtr->TraceConnectWithoutContext ("TotalEnergyConsumption", MakeBoundCallback (&TotalEnergy, stream2));
+    }
   /***************************************************************************/
 
   Ipv4AddressHelper address;
@@ -145,7 +161,7 @@ main (int argc, char *argv[])
   echoServer.ScheduleNotification (serverApps.Get (0), Seconds (5.0));
 
   WildfireClientHelper echoClient (star.GetSpokeIpv4Address (0), 202, 202);
-  echoClient.SetAttribute ("BroadcastInterval", TimeValue (Seconds(2.0)));
+  echoClient.SetAttribute ("BroadcastInterval", TimeValue (Seconds (2.0)));
 
   ApplicationContainer clientApps = echoClient.Install (star.GetSpokeNode (1));
   clientApps.Start (Seconds (2.0));
@@ -153,12 +169,25 @@ main (int argc, char *argv[])
   echoClient.ScheduleSubscription (clientApps.Get (0), Seconds (2.5), star.GetSpokeIpv4Address (0));
 
   WildfireClientHelper echoClient2 (star.GetSpokeIpv4Address (0), 202, 202);
-  echoClient2.SetAttribute ("BroadcastInterval", TimeValue (Seconds(2.0)));
+  echoClient2.SetAttribute ("BroadcastInterval", TimeValue (Seconds (2.0)));
 
   ApplicationContainer clientApps2 = echoClient2.Install (star.GetSpokeNode (2));
   clientApps2.Start (Seconds (3.0));
   clientApps2.Stop (Seconds (10.0));
   echoClient2.ScheduleSubscription (clientApps2.Get (0), Seconds (3.5), star.GetSpokeIpv4Address (0));
+
+  AsciiTraceHelper asciiTraceHelper;
+  Ptr<OutputStreamWrapper> stream = asciiTraceHelper.CreateFileStream ("NotificationCount.dat");
+  clientApps.Get (0)->TraceConnectWithoutContext ("RxNotification", MakeBoundCallback (&LogRecieved, stream));
+  clientApps2.Get (0)->TraceConnectWithoutContext ("RxNotification", MakeBoundCallback (&LogRecieved, stream));
+
+  stream = asciiTraceHelper.CreateFileStream ("SentCount.dat");
+  clientApps.Get (0)->TraceConnectWithoutContext ("Tx", MakeBoundCallback (&LogSent, stream));
+  clientApps2.Get (0)->TraceConnectWithoutContext ("Tx", MakeBoundCallback (&LogSent, stream));
+  serverApps.Get (0)->TraceConnectWithoutContext ("Tx", MakeBoundCallback (&LogSent, stream));
+
+  stream = asciiTraceHelper.CreateFileStream ("AckCount.dat");
+  serverApps.Get (0)->TraceConnectWithoutContext ("Ack", MakeBoundCallback (&LogAck, stream));
 
   // This allows for global routing across connection types
   Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
@@ -199,16 +228,47 @@ void disconnect (Ptr<NetDevice> router)
 
 /// Trace function for remaining energy at node.
 void
-RemainingEnergy (double oldValue, double remainingEnergy)
+RemainingEnergy (Ptr<OutputStreamWrapper> stream, double oldValue, double remainingEnergy)
 {
   NS_LOG_INFO (Simulator::Now ().GetSeconds ()
-                 << "s Current remaining energy = " << remainingEnergy << "J");
+               << "s Current remaining energy = " << remainingEnergy << "J");
+  if (remainingEnergy <= 0)
+    {
+      total_dead_battery++;
+    }
+
+  *stream->GetStream () << Simulator::Now ().GetSeconds () << "\t" << total_dead_battery << std::endl;
 }
 
 /// Trace function for total energy consumption at node.
 void
-TotalEnergy (double oldValue, double totalEnergy)
+TotalEnergy (Ptr<OutputStreamWrapper> stream, double oldValue, double totalEnergy)
 {
   NS_LOG_INFO (Simulator::Now ().GetSeconds ()
-                 << "s Total energy consumed by radio = " << totalEnergy << "J");
+               << "s Total energy consumed by radio = " << totalEnergy << "J");
+
+  total_power += totalEnergy - oldValue;
+  *stream->GetStream () << Simulator::Now ().GetSeconds () << "\t" << total_power << std::endl;
+}
+
+static void
+LogRecieved (Ptr<OutputStreamWrapper> stream)
+{
+  ++notifications_received;
+  NS_LOG_INFO (Simulator::Now ().GetSeconds () << "\t" << notifications_received);
+  *stream->GetStream () << Simulator::Now ().GetSeconds () << "\t" << notifications_received << std::endl;
+}
+
+static void
+LogSent (Ptr<OutputStreamWrapper> stream)
+{
+  ++total_sent_messages;
+  *stream->GetStream () << Simulator::Now ().GetSeconds () << "\t" << total_sent_messages << std::endl;
+}
+
+static void
+LogAck (Ptr<OutputStreamWrapper> stream)
+{
+  ++total_notification_acks;
+  *stream->GetStream () << Simulator::Now ().GetSeconds () << "\t" << total_notification_acks << std::endl;
 }
