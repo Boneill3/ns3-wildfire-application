@@ -60,29 +60,31 @@ uint64_t total_dead_battery = 0;
 int
 main (int argc, char *argv[])
 {
-  uint32_t nPackets = 1;
+  uint32_t nNodes = 2;
 
   CommandLine cmd (__FILE__);
-  cmd.AddValue ("nPackets", "Number of packets to echo", nPackets);
+  cmd.AddValue ("nNodes", "Number of nodes to create", nNodes);
   cmd.Parse (argc, argv);
 
   Time::SetResolution (Time::NS);
-  //LogComponentEnable ("WildfireClientApplication", LOG_LEVEL_INFO);
-  //LogComponentEnable ("WildfireServerApplication", LOG_LEVEL_INFO);
+  LogComponentEnable ("WildfireClientApplication", LOG_LEVEL_INFO);
+  LogComponentEnable ("WildfireServerApplication", LOG_LEVEL_INFO);
 
   NS_LOG_INFO ("Creating Topology");
 
   // Connected Internet state
   CsmaHelper csma;
-  CsmaStarHelper star (3, csma);
+  CsmaStarHelper star (nNodes + 1, csma);
   InternetStackHelper internet;
   star.InstallStack (internet);
   star.AssignIpv4Addresses (Ipv4AddressHelper ("10.1.1.0", "255.255.255.0"));
 
   // Wifi Related
   NodeContainer wifiNodes;
-  wifiNodes.Add (star.GetSpokeNode (1));
-  wifiNodes.Add (star.GetSpokeNode (2));
+  for (int i = 1; i < nNodes + 1; ++i)
+    {
+      wifiNodes.Add (star.GetSpokeNode (i));
+    }
 
   WifiHelper wifi;
   wifi.SetStandard (WIFI_STANDARD_80211ac);
@@ -101,13 +103,14 @@ main (int argc, char *argv[])
   NetDeviceContainer wifiDevices = wifi.Install (phy, mac, wifiNodes);
 
   MobilityHelper mobility;
-  Ptr<ListPositionAllocator> positionAlloc = CreateObject<ListPositionAllocator> ();
-  positionAlloc->Add (Vector (0.0, 0.0, 0.0));
-  positionAlloc->Add (Vector (5.0, 0.0, 0.0));
-  mobility.SetPositionAllocator (positionAlloc);
+  mobility.SetPositionAllocator ("ns3::RandomDiscPositionAllocator",
+                                 "X", StringValue ("100.0"),
+                                 "Y", StringValue ("100.0"),
+                                 "Rho", StringValue ("ns3::UniformRandomVariable[Min=0|Max=30]"));
   mobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
 
   mobility.Install (wifiNodes);
+
   //End wifi related
 
   /** Energy Model **/
@@ -163,27 +166,26 @@ main (int argc, char *argv[])
   WildfireClientHelper echoClient (star.GetSpokeIpv4Address (0), 202, 202);
   echoClient.SetAttribute ("BroadcastInterval", TimeValue (Seconds (2.0)));
 
-  ApplicationContainer clientApps = echoClient.Install (star.GetSpokeNode (1));
+  ApplicationContainer clientApps = echoClient.Install (wifiNodes);
+  //ApplicationContainer clientApps = echoClient.Install(star.GetSpokeDevices());
   clientApps.Start (Seconds (2.0));
   clientApps.Stop (Seconds (10.0));
   echoClient.ScheduleSubscription (clientApps.Get (0), Seconds (2.5), star.GetSpokeIpv4Address (0));
-
-  WildfireClientHelper echoClient2 (star.GetSpokeIpv4Address (0), 202, 202);
-  echoClient2.SetAttribute ("BroadcastInterval", TimeValue (Seconds (2.0)));
-
-  ApplicationContainer clientApps2 = echoClient2.Install (star.GetSpokeNode (2));
-  clientApps2.Start (Seconds (3.0));
-  clientApps2.Stop (Seconds (10.0));
-  echoClient2.ScheduleSubscription (clientApps2.Get (0), Seconds (3.5), star.GetSpokeIpv4Address (0));
+  //echoClient.ScheduleSubscription (clientApps.Get (1), Seconds (3.5), star.GetSpokeIpv4Address (0));
 
   AsciiTraceHelper asciiTraceHelper;
   Ptr<OutputStreamWrapper> stream = asciiTraceHelper.CreateFileStream ("NotificationCount.dat");
-  clientApps.Get (0)->TraceConnectWithoutContext ("RxNotification", MakeBoundCallback (&LogRecieved, stream));
-  clientApps2.Get (0)->TraceConnectWithoutContext ("RxNotification", MakeBoundCallback (&LogRecieved, stream));
+  for ( int i = 0; i < clientApps.GetN (); ++i)
+    {
+      clientApps.Get (i)->TraceConnectWithoutContext ("RxNotification", MakeBoundCallback (&LogRecieved, stream));
+    }
 
   stream = asciiTraceHelper.CreateFileStream ("SentCount.dat");
-  clientApps.Get (0)->TraceConnectWithoutContext ("Tx", MakeBoundCallback (&LogSent, stream));
-  clientApps2.Get (0)->TraceConnectWithoutContext ("Tx", MakeBoundCallback (&LogSent, stream));
+  for ( int i = 0; i < clientApps.GetN (); ++i)
+    {
+      clientApps.Get (i)->TraceConnectWithoutContext ("Tx", MakeBoundCallback (&LogSent, stream));
+    }
+
   serverApps.Get (0)->TraceConnectWithoutContext ("Tx", MakeBoundCallback (&LogSent, stream));
 
   stream = asciiTraceHelper.CreateFileStream ("AckCount.dat");
