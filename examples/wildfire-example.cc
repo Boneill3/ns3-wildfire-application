@@ -32,6 +32,8 @@
 #include "ns3/energy-source-container.h"
 #include "ns3/device-energy-model-container.h"
 
+#include "ns3/netanim-module.h"
+
 #include "ns3/wildfire-module.h"
 
 //        Network Topology
@@ -111,6 +113,21 @@ main (int argc, char *argv[])
 
   mobility.Install (wifiNodes);
 
+  AnimationInterface anim ("wildfire-animation.xml"); // Mandatory
+
+  for (uint32_t i = 0; i < wifiNodes.GetN (); ++i)
+    {
+      anim.UpdateNodeDescription (wifiNodes.Get (i), "MOB"); // Optional
+      anim.UpdateNodeColor (wifiNodes.Get (i), 255, 0, 0); // Optional
+    }
+
+  anim.UpdateNodeDescription (star.GetSpokeNode (0), "SERVER"); // Optional
+  anim.UpdateNodeColor (star.GetSpokeNode (0), 0, 255, 0); // Optional
+  AnimationInterface::SetConstantPosition (star.GetSpokeNode (0), 10, 20); 
+
+  anim.UpdateNodeDescription (star.GetHub (), "HUB"); // Optional
+  anim.UpdateNodeColor (star.GetHub (), 0, 0, 255); // Optional
+  AnimationInterface::SetConstantPosition (star.GetHub (), 10, 30); 
   //End wifi related
 
   /** Energy Model **/

@@ -11,6 +11,8 @@ def build(bld):
                                                       'csma',
                                                       'csma-layout',
                                                       'point-to-point-layout',
-                                                      'energy',])
+                                                      'energy',
+                                                      'netanim',
+                                                      ])
     obj.source = 'wildfire-example.cc'
 
