@@ -13,6 +13,7 @@ def build(bld):
                                                       'point-to-point-layout',
                                                       'energy',
                                                       'netanim',
+                                                      'lte',
                                                       ])
     obj.source = 'wildfire-example.cc'
 

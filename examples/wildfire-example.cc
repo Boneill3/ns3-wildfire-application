@@ -24,6 +24,7 @@
 #include "ns3/csma-module.h"
 #include "ns3/csma-layout-module.h"
 #include "ns3/mobility-module.h"
+#include "ns3/lte-module.h"
 
 #include "ns3/basic-energy-source.h"
 #include "ns3/wifi-radio-energy-model.h"
@@ -74,18 +75,92 @@ main (int argc, char *argv[])
 
   NS_LOG_INFO ("Creating Topology");
 
-  // Connected Internet state
-  CsmaHelper csma;
-  CsmaStarHelper star (nNodes + 1, csma);
-  InternetStackHelper internet;
-  star.InstallStack (internet);
-  star.AssignIpv4Addresses (Ipv4AddressHelper ("10.1.1.0", "255.255.255.0"));
+  /** LTE Model **/
+  Ptr<LteHelper> lteHelper = CreateObject<LteHelper> ();
+  Ptr<PointToPointEpcHelper> epcHelper = CreateObject<PointToPointEpcHelper> ();
+  lteHelper->SetEpcHelper (epcHelper);
 
-  // Wifi Related
-  NodeContainer wifiNodes;
-  for (int i = 1; i < nNodes + 1; ++i)
+  Ptr<Node> pgw = epcHelper->GetPgwNode ();
+
+  // Create a single RemoteHost
+  NodeContainer remoteHostContainer;
+  remoteHostContainer.Create (1);
+  Ptr<Node> remoteHost = remoteHostContainer.Get (0);
+  InternetStackHelper internet;
+  internet.Install (remoteHostContainer);
+
+  // Create the Internet
+  PointToPointHelper p2ph;
+  p2ph.SetDeviceAttribute ("DataRate", DataRateValue (DataRate ("100Gb/s")));
+  p2ph.SetDeviceAttribute ("Mtu", UintegerValue (1500));
+  p2ph.SetChannelAttribute ("Delay", TimeValue (MilliSeconds (10)));
+  NetDeviceContainer internetDevices = p2ph.Install (pgw, remoteHost);
+  Ipv4AddressHelper ipv4h;
+  ipv4h.SetBase ("1.0.0.0", "255.0.0.0");
+  Ipv4InterfaceContainer internetIpIfaces = ipv4h.Assign (internetDevices);
+  // interface 0 is localhost, 1 is the p2p device
+  Ipv4Address remoteHostAddr = internetIpIfaces.GetAddress (1);
+
+  Ipv4StaticRoutingHelper ipv4RoutingHelper;
+  Ptr<Ipv4StaticRouting> remoteHostStaticRouting = ipv4RoutingHelper.GetStaticRouting (remoteHost->GetObject<Ipv4> ());
+  remoteHostStaticRouting->AddNetworkRouteTo (Ipv4Address ("7.0.0.0"), Ipv4Mask ("255.0.0.0"), 1);
+
+  NodeContainer enbNodes;
+  NodeContainer ueNodes;
+  enbNodes.Create (1);
+  ueNodes.Create (nNodes);
+
+  // Install Mobility Model
+  Ptr<ListPositionAllocator> positionAlloc = CreateObject<ListPositionAllocator> ();
+  for (uint16_t i = 0; i < 1; i++)
     {
-      wifiNodes.Add (star.GetSpokeNode (i));
+      positionAlloc->Add (Vector (5, 0, 0));
+    }
+
+  MobilityHelper mobility;
+  mobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
+  mobility.SetPositionAllocator (positionAlloc);
+  mobility.Install (enbNodes);
+
+  mobility.SetPositionAllocator ("ns3::RandomDiscPositionAllocator",
+                                 "X", StringValue ("100.0"),
+                                 "Y", StringValue ("100.0"),
+                                 "Rho", StringValue ("ns3::UniformRandomVariable[Min=0|Max=30]"));
+  mobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
+
+  mobility.Install (ueNodes);
+
+  // Install LTE Devices to the nodes
+  NetDeviceContainer enbLteDevs = lteHelper->InstallEnbDevice (enbNodes);
+  NetDeviceContainer ueLteDevs = lteHelper->InstallUeDevice (ueNodes);
+  internet.Install (ueNodes);
+
+  // Install the IP stack on the UEs
+  Ipv4InterfaceContainer ueIpIface;
+  ueIpIface = epcHelper->AssignUeIpv4Address (NetDeviceContainer (ueLteDevs));
+  // Install the IP stack on the UEs
+  // Assign IP address to UEs, and install applications
+  for (uint32_t u = 0; u < ueNodes.GetN (); ++u)
+    {
+      Ptr<Node> ueNode = ueNodes.Get (u);
+      // Set the default gateway for the UE
+      Ptr<Ipv4StaticRouting> ueStaticRouting = ipv4RoutingHelper.GetStaticRouting (ueNode->GetObject<Ipv4> ());
+      ueStaticRouting->SetDefaultRoute (epcHelper->GetUeDefaultGatewayAddress (), 1);
+    }
+
+  // Attach UEs to eNB
+  // Does this mean no range limitation
+  for (uint16_t i = 0; i < ueNodes.GetN (); i++)
+    {
+      lteHelper->Attach (ueLteDevs.Get (i), enbLteDevs.Get (0));
+      // side effect: the default EPS bearer will be activated
+    }
+
+  /** Wifi Model **/
+  NodeContainer wifiNodes;
+  for (int i = 0; i < ueNodes.GetN (); ++i)
+    {
+      wifiNodes.Add (ueNodes.Get (i));
     }
 
   WifiHelper wifi;
@@ -104,15 +179,9 @@ main (int argc, char *argv[])
   WifiMacHelper mac = wifiMac;
   NetDeviceContainer wifiDevices = wifi.Install (phy, mac, wifiNodes);
 
-  MobilityHelper mobility;
-  mobility.SetPositionAllocator ("ns3::RandomDiscPositionAllocator",
-                                 "X", StringValue ("100.0"),
-                                 "Y", StringValue ("100.0"),
-                                 "Rho", StringValue ("ns3::UniformRandomVariable[Min=0|Max=30]"));
-  mobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
+  //End wifi related
 
-  mobility.Install (wifiNodes);
-
+  /** Animation **/
   AnimationInterface anim ("wildfire-animation.xml"); // Mandatory
 
   for (uint32_t i = 0; i < wifiNodes.GetN (); ++i)
@@ -121,14 +190,22 @@ main (int argc, char *argv[])
       anim.UpdateNodeColor (wifiNodes.Get (i), 255, 0, 0); // Optional
     }
 
-  anim.UpdateNodeDescription (star.GetSpokeNode (0), "SERVER"); // Optional
-  anim.UpdateNodeColor (star.GetSpokeNode (0), 0, 255, 0); // Optional
-  AnimationInterface::SetConstantPosition (star.GetSpokeNode (0), 10, 20); 
+  anim.UpdateNodeDescription (enbNodes.Get (0), "eNB"); // Optional
+  anim.UpdateNodeColor (enbNodes.Get (0), 0, 255, 0); // Optional
 
-  anim.UpdateNodeDescription (star.GetHub (), "HUB"); // Optional
-  anim.UpdateNodeColor (star.GetHub (), 0, 0, 255); // Optional
-  AnimationInterface::SetConstantPosition (star.GetHub (), 10, 30); 
-  //End wifi related
+  anim.UpdateNodeDescription (epcHelper->GetPgwNode (), "PGW"); // Optional
+  anim.UpdateNodeColor (epcHelper->GetPgwNode (), 0, 0, 255); // Optional
+
+  anim.UpdateNodeDescription (epcHelper->GetSgwNode (), "SGW"); // Optional
+  anim.UpdateNodeColor (epcHelper->GetSgwNode (), 0, 0, 255); // Optional
+
+  // Note: Node 2 is the MME node used for the LTE simulation. I am unable to
+  // get a reference to that node at this time in order to rename it
+
+  anim.UpdateNodeDescription (remoteHostContainer.Get (0), "Server"); // Optional
+  anim.UpdateNodeColor (remoteHostContainer.Get (0), 0, 0, 255); // Optional
+  AnimationInterface::SetConstantPosition (remoteHostContainer.Get (0), 10, 30);
+
 
   /** Energy Model **/
   /***************************************************************************/
@@ -175,20 +252,22 @@ main (int argc, char *argv[])
 
   WildfireServerHelper echoServer (202);
 
-  ApplicationContainer serverApps = echoServer.Install (star.GetSpokeNode (0));
+  ApplicationContainer serverApps = echoServer.Install (remoteHostContainer.Get (0));
   serverApps.Start (Seconds (1.0));
   serverApps.Stop (Seconds (10.0));
   echoServer.ScheduleNotification (serverApps.Get (0), Seconds (5.0));
 
-  WildfireClientHelper echoClient (star.GetSpokeIpv4Address (0), 202, 202);
+  WildfireClientHelper echoClient (remoteHostAddr, 202, 202);
   echoClient.SetAttribute ("BroadcastInterval", TimeValue (Seconds (2.0)));
 
   ApplicationContainer clientApps = echoClient.Install (wifiNodes);
-  //ApplicationContainer clientApps = echoClient.Install(star.GetSpokeDevices());
   clientApps.Start (Seconds (2.0));
   clientApps.Stop (Seconds (10.0));
-  echoClient.ScheduleSubscription (clientApps.Get (0), Seconds (2.5), star.GetSpokeIpv4Address (0));
-  //echoClient.ScheduleSubscription (clientApps.Get (1), Seconds (3.5), star.GetSpokeIpv4Address (0));
+
+  for ( int i = 0; i < clientApps.GetN (); ++i)
+    {
+      echoClient.ScheduleSubscription (clientApps.Get (i), Seconds (2.5), remoteHostAddr );
+    }
 
   AsciiTraceHelper asciiTraceHelper;
   Ptr<OutputStreamWrapper> stream = asciiTraceHelper.CreateFileStream ("NotificationCount.dat");
@@ -209,18 +288,20 @@ main (int argc, char *argv[])
   serverApps.Get (0)->TraceConnectWithoutContext ("Ack", MakeBoundCallback (&LogAck, stream));
 
   // This allows for global routing across connection types
-  Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
+  // Currently causing a crash
+  //Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
 
   AsciiTraceHelper ascii;
   //pointToPoint.EnableAsciiAll (ascii.CreateFileStream ("myfirst.tr"));
 
   // Schedule Network Disruption
+  // TODO: Update this to disable LTE eNBs
   // Server (Internet)
   //Simulator::Schedule (Seconds (4.0), disconnect, star.GetHub ()->GetDevice (0));
   // Wireless Device 1
   //Simulator::Schedule (Seconds (4.0), disconnect, star.GetHub ()->GetDevice (1));
   // Wireless Device 2
-  Simulator::Schedule (Seconds (4.0), disconnect, star.GetHub ()->GetDevice (2));
+  //Simulator::Schedule (Seconds (4.0), disconnect, star.GetHub ()->GetDevice (2));
 
   // Simulator must be stopped when using energy
   Simulator::Stop (Seconds (10.0));
