@@ -105,16 +105,19 @@ main (int argc, char *argv[])
   Ptr<Ipv4StaticRouting> remoteHostStaticRouting = ipv4RoutingHelper.GetStaticRouting (remoteHost->GetObject<Ipv4> ());
   remoteHostStaticRouting->AddNetworkRouteTo (Ipv4Address ("7.0.0.0"), Ipv4Mask ("255.0.0.0"), 1);
 
+  // enbNodes are LTE towers, ueNodes are mobile devices
   NodeContainer enbNodes;
   NodeContainer ueNodes;
-  enbNodes.Create (1);
+  enbNodes.Create (2);
   ueNodes.Create (nNodes);
 
   // Install Mobility Model
   Ptr<ListPositionAllocator> positionAlloc = CreateObject<ListPositionAllocator> ();
-  for (uint16_t i = 0; i < 1; i++)
+  for (uint16_t i = 0; i < enbNodes.GetN (); i++)
     {
-      positionAlloc->Add (Vector (5, 0, 0));
+      positionAlloc->Add (Vector (0, 0, 0));
+      i += 1;
+      positionAlloc->Add (Vector (35000, 35000, 0));
     }
 
   MobilityHelper mobility;
@@ -122,10 +125,11 @@ main (int argc, char *argv[])
   mobility.SetPositionAllocator (positionAlloc);
   mobility.Install (enbNodes);
 
+  // Disconection from enb at 0,0 begins at 20000,20000
   mobility.SetPositionAllocator ("ns3::RandomDiscPositionAllocator",
-                                 "X", StringValue ("100.0"),
-                                 "Y", StringValue ("100.0"),
-                                 "Rho", StringValue ("ns3::UniformRandomVariable[Min=0|Max=30]"));
+                                 "X", StringValue ("20000.0"),
+                                 "Y", StringValue ("20000.0"),
+                                 "Rho", StringValue ("ns3::UniformRandomVariable[Min=-20000|Max=20000]"));
   mobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
 
   mobility.Install (ueNodes);
@@ -133,11 +137,14 @@ main (int argc, char *argv[])
   // Install LTE Devices to the nodes
   NetDeviceContainer enbLteDevs = lteHelper->InstallEnbDevice (enbNodes);
   NetDeviceContainer ueLteDevs = lteHelper->InstallUeDevice (ueNodes);
+  // X2 Interface should enable handoff between enbs
+  lteHelper->AddX2Interface (enbNodes);
   internet.Install (ueNodes);
 
   // Install the IP stack on the UEs
   Ipv4InterfaceContainer ueIpIface;
-  ueIpIface = epcHelper->AssignUeIpv4Address (NetDeviceContainer (ueLteDevs));
+  ueIpIface = epcHelper->AssignUeIpv4Address (ueLteDevs);
+
   // Install the IP stack on the UEs
   // Assign IP address to UEs, and install applications
   for (uint32_t u = 0; u < ueNodes.GetN (); ++u)
@@ -149,12 +156,9 @@ main (int argc, char *argv[])
     }
 
   // Attach UEs to eNB
-  // Does this mean no range limitation
-  for (uint16_t i = 0; i < ueNodes.GetN (); i++)
-    {
-      lteHelper->Attach (ueLteDevs.Get (i), enbLteDevs.Get (0));
-      // side effect: the default EPS bearer will be activated
-    }
+  lteHelper->AttachToClosestEnb (ueLteDevs, enbLteDevs);
+  // side effect: the default EPS bearer will be activated
+
 
   /** Wifi Model **/
   NodeContainer wifiNodes;
