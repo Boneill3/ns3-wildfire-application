@@ -299,13 +299,7 @@ main (int argc, char *argv[])
   //pointToPoint.EnableAsciiAll (ascii.CreateFileStream ("myfirst.tr"));
 
   // Schedule Network Disruption
-  // TODO: Update this to disable LTE eNBs
-  // Server (Internet)
-  //Simulator::Schedule (Seconds (4.0), disconnect, star.GetHub ()->GetDevice (0));
-  // Wireless Device 1
-  //Simulator::Schedule (Seconds (4.0), disconnect, star.GetHub ()->GetDevice (1));
-  // Wireless Device 2
-  //Simulator::Schedule (Seconds (4.0), disconnect, star.GetHub ()->GetDevice (2));
+  Simulator::Schedule (Seconds (4.0), disconnect, enbLteDevs.Get(0));
 
   // Simulator must be stopped when using energy
   Simulator::Stop (Seconds (10.0));
@@ -323,10 +317,11 @@ main (int argc, char *argv[])
   return 0;
 }
 
-void disconnect (Ptr<NetDevice> router)
+void disconnect (Ptr<NetDevice> enbDevice)
 {
-  auto csmaRouter = DynamicCast<CsmaNetDevice, NetDevice> (router);
-  csmaRouter->SetSendEnable (false);
+  auto enb = DynamicCast<LteEnbNetDevice, NetDevice> (enbDevice);
+  auto phy = enb->GetPhy();
+  phy->SetTxPower(0);
   NS_LOG_INFO ("Network Disconnected");
 }
 
