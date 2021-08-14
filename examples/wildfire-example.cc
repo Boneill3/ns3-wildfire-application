@@ -51,20 +51,23 @@ void disconnect (Ptr<NetDevice> router);
 void RemainingEnergy (Ptr<OutputStreamWrapper> stream, double oldValue, double remainingEnergy);
 void TotalEnergy (Ptr<OutputStreamWrapper> stream, double oldValue, double totalEnergy);
 static void LogRecieved (Ptr<OutputStreamWrapper> stream);
+static void PeerLogRecieved (Ptr<OutputStreamWrapper> stream);
 static void LogSent (Ptr<OutputStreamWrapper> stream);
 static void LogAck (Ptr<OutputStreamWrapper> stream);
+static void LogSub (Ptr<OutputStreamWrapper> stream);
 
 uint64_t notifications_received = 0;
+uint64_t peer_notifications_received = 0;
 uint64_t total_sent_messages = 0;
 uint64_t total_notification_acks = 0;
+uint64_t total_subs = 0;
 double total_power = 0;
 uint64_t total_dead_battery = 0;
+uint32_t nNodes = 2;
 
 int
 main (int argc, char *argv[])
 {
-  uint32_t nNodes = 2;
-
   CommandLine cmd (__FILE__);
   cmd.AddValue ("nNodes", "Number of nodes to create", nNodes);
   cmd.Parse (argc, argv);
@@ -72,6 +75,7 @@ main (int argc, char *argv[])
   Time::SetResolution (Time::NS);
   LogComponentEnable ("WildfireClientApplication", LOG_LEVEL_INFO);
   LogComponentEnable ("WildfireServerApplication", LOG_LEVEL_INFO);
+  // LogComponentEnable ("WildfireMobilityModel", LOG_LEVEL_INFO);
 
   NS_LOG_INFO ("Creating Topology");
 
@@ -105,6 +109,9 @@ main (int argc, char *argv[])
   Ptr<Ipv4StaticRouting> remoteHostStaticRouting = ipv4RoutingHelper.GetStaticRouting (remoteHost->GetObject<Ipv4> ());
   remoteHostStaticRouting->AddNetworkRouteTo (Ipv4Address ("7.0.0.0"), Ipv4Mask ("255.0.0.0"), 1);
 
+  // Enable server pcap
+  p2ph.EnablePcap ("WildfireServer", remoteHostContainer, true);
+
   // enbNodes are LTE towers, ueNodes are mobile devices
   NodeContainer enbNodes;
   NodeContainer ueNodes;
@@ -117,7 +124,7 @@ main (int argc, char *argv[])
     {
       positionAlloc->Add (Vector (0, 0, 0));
       i += 1;
-      positionAlloc->Add (Vector (35000, 35000, 0));
+      positionAlloc->Add (Vector (17500, 17500, 0));
     }
 
   MobilityHelper mobility;
@@ -127,14 +134,15 @@ main (int argc, char *argv[])
 
   // Disconection from enb at 0,0 begins at 20000,20000
   mobility.SetPositionAllocator ("ns3::RandomDiscPositionAllocator",
-                                 "X", StringValue ("20000.0"),
-                                 "Y", StringValue ("20000.0"),
-                                 "Rho", StringValue ("ns3::UniformRandomVariable[Min=-20000|Max=20000]"));
-  mobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
+                                 "X", StringValue ("8750.0"),
+                                 "Y", StringValue ("8750.0"),
+                                 "Rho", StringValue ("ns3::UniformRandomVariable[Min=-100|Max=100]"));
+  mobility.SetMobilityModel ("ns3::WildfireMobilityModel");
 
   mobility.Install (ueNodes);
 
   // Install LTE Devices to the nodes
+  Config::SetDefault ("ns3::LteEnbRrc::SrsPeriodicity", UintegerValue (80)); // must be more than number of UEnodes
   NetDeviceContainer enbLteDevs = lteHelper->InstallEnbDevice (enbNodes);
   NetDeviceContainer ueLteDevs = lteHelper->InstallUeDevice (ueNodes);
   // X2 Interface should enable handoff between enbs
@@ -258,15 +266,16 @@ main (int argc, char *argv[])
 
   ApplicationContainer serverApps = echoServer.Install (remoteHostContainer.Get (0));
   serverApps.Start (Seconds (1.0));
-  serverApps.Stop (Seconds (10.0));
-  echoServer.ScheduleNotification (serverApps.Get (0), Seconds (5.0));
+  //serverApps.Stop (Seconds (60.0));
+  // Delaying notification 60 seconds to give enought time for initialization
+  echoServer.ScheduleNotification (serverApps.Get (0), Seconds (10.0));
 
   WildfireClientHelper echoClient (remoteHostAddr, 202, 202);
-  echoClient.SetAttribute ("BroadcastInterval", TimeValue (Seconds (2.0)));
+  echoClient.SetAttribute ("BroadcastInterval", TimeValue (Seconds (1.0)));
 
   ApplicationContainer clientApps = echoClient.Install (wifiNodes);
   clientApps.Start (Seconds (2.0));
-  clientApps.Stop (Seconds (10.0));
+  //clientApps.Stop (Seconds (60.0));
 
   for ( int i = 0; i < clientApps.GetN (); ++i)
     {
@@ -280,6 +289,13 @@ main (int argc, char *argv[])
       clientApps.Get (i)->TraceConnectWithoutContext ("RxNotification", MakeBoundCallback (&LogRecieved, stream));
     }
 
+  stream = asciiTraceHelper.CreateFileStream ("PeerNotificationCount.dat");
+  for ( int i = 0; i < clientApps.GetN (); ++i)
+    {
+      clientApps.Get (i)->TraceConnectWithoutContext ("RxPeerNotification", MakeBoundCallback (&PeerLogRecieved, stream));
+    }
+
+
   stream = asciiTraceHelper.CreateFileStream ("SentCount.dat");
   for ( int i = 0; i < clientApps.GetN (); ++i)
     {
@@ -291,6 +307,9 @@ main (int argc, char *argv[])
   stream = asciiTraceHelper.CreateFileStream ("AckCount.dat");
   serverApps.Get (0)->TraceConnectWithoutContext ("Ack", MakeBoundCallback (&LogAck, stream));
 
+  stream = asciiTraceHelper.CreateFileStream ("SubCount.dat");
+  serverApps.Get (0)->TraceConnectWithoutContext ("Sub", MakeBoundCallback (&LogSub, stream));
+
   // This allows for global routing across connection types
   // Currently causing a crash
   //Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
@@ -299,10 +318,10 @@ main (int argc, char *argv[])
   //pointToPoint.EnableAsciiAll (ascii.CreateFileStream ("myfirst.tr"));
 
   // Schedule Network Disruption
-  Simulator::Schedule (Seconds (4.0), disconnect, enbLteDevs.Get(0));
+  Simulator::Schedule (Seconds (9.0), disconnect, enbLteDevs.Get (1));
 
   // Simulator must be stopped when using energy
-  Simulator::Stop (Seconds (10.0));
+  Simulator::Stop (Seconds (15.0));
 
   Simulator::Run ();
 
@@ -319,9 +338,11 @@ main (int argc, char *argv[])
 
 void disconnect (Ptr<NetDevice> enbDevice)
 {
+  // Assert that all Nodes have subscribed
+  NS_ASSERT (total_subs == nNodes);
   auto enb = DynamicCast<LteEnbNetDevice, NetDevice> (enbDevice);
-  auto phy = enb->GetPhy();
-  phy->SetTxPower(0);
+  auto phy = enb->GetPhy ();
+  phy->SetTxPower (0);
   NS_LOG_INFO ("Network Disconnected");
 }
 
@@ -359,6 +380,14 @@ LogRecieved (Ptr<OutputStreamWrapper> stream)
 }
 
 static void
+PeerLogRecieved (Ptr<OutputStreamWrapper> stream)
+{
+  ++peer_notifications_received;
+  NS_LOG_INFO (Simulator::Now ().GetSeconds () << "\t" << peer_notifications_received);
+  *stream->GetStream () << Simulator::Now ().GetSeconds () << "\t" << peer_notifications_received << std::endl;
+}
+
+static void
 LogSent (Ptr<OutputStreamWrapper> stream)
 {
   ++total_sent_messages;
@@ -371,3 +400,11 @@ LogAck (Ptr<OutputStreamWrapper> stream)
   ++total_notification_acks;
   *stream->GetStream () << Simulator::Now ().GetSeconds () << "\t" << total_notification_acks << std::endl;
 }
+
+static void
+LogSub (Ptr<OutputStreamWrapper> stream)
+{
+  ++total_subs;
+  *stream->GetStream () << Simulator::Now ().GetSeconds () << "\t" << total_subs << std::endl;
+}
+

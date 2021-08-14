@@ -21,6 +21,7 @@
 
 #include "ns3/wildfire-server.h"
 #include "ns3/wildfire-client.h"
+#include "ns3/wildfire-mobility-model.h"
 
 namespace ns3 {
 
@@ -131,6 +132,8 @@ Ptr<Application>
 WildfireClientHelper::InstallPriv (Ptr<Node> node) const
 {
   Ptr<Application> app = m_factory.Create<WildfireClient> ();
+  Ptr<WildfireClient> wildfire_client = DynamicCast<WildfireClient> (app);
+  wildfire_client->SetMobility (node->GetObject<WildfireMobilityModel> ());
   node->AddApplication (app);
 
   return app;

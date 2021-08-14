@@ -23,6 +23,7 @@
 #include "ns3/inet6-socket-address.h"
 #include "ns3/socket.h"
 #include "ns3/simulator.h"
+#include "ns3/tcp-socket-factory.h"
 #include "ns3/socket-factory.h"
 #include "ns3/packet.h"
 #include "ns3/uinteger.h"
@@ -76,6 +77,9 @@ WildfireClient::GetTypeId (void)
     .AddTraceSource ("RxNotification", "A Notification has been received",
                      MakeTraceSourceAccessor (&WildfireClient::m_rxNotification),
                      "")
+    .AddTraceSource ("RxPeerNotification", "A Peer Notification has been received",
+                     MakeTraceSourceAccessor (&WildfireClient::m_rxPeerNotification),
+                     "")
   ;
   return tid;
 }
@@ -116,6 +120,12 @@ WildfireClient::SetRemote (Address addr)
 }
 
 void
+WildfireClient::SetMobility (const Ptr<WildfireMobilityModel> mobility)
+{
+  m_mobility = mobility;
+}
+
+void
 WildfireClient::DoDispose (void)
 {
   NS_LOG_FUNCTION (this);
@@ -129,6 +139,7 @@ WildfireClient::StartApplication (void)
 
   if (m_socket == 0)
     {
+      // TODO: Make this be TCP or have a retry mechanism added
       TypeId tid = TypeId::LookupByName ("ns3::UdpSocketFactory");
       m_socket = Socket::CreateSocket (GetNode (), tid);
       if (Ipv4Address::IsMatchingType (m_peerAddress) == true)
@@ -220,11 +231,24 @@ WildfireClient::HandleRead (Ptr<Socket> socket)
       if(!m_received && message->getType () == WildfireMessageType::notification
          && message->isValid (m_key) && !message->isExpired ())
         {
+          // TODO: Update to get destination from message
+          if (m_mobility)
+            {
+              m_mobility->SetDestinationVelocity (Vector (17500, 17500, 0), 10);
+            }
           m_rxNotification ();
+          auto sender = InetSocketAddress::ConvertFrom (from).GetIpv4 ();
+          if ( sender != m_peerAddress )
+            {
+              m_rxPeerNotification ();
+            }
           m_received = true;
           NS_LOG_INFO ("Send Ack to " << InetSocketAddress::ConvertFrom (from).GetIpv4 ());
           SendAck (socket, &from, message->getId ());
-          Broadcast ();
+
+          // Schedule broadcast instead of instant broadcast so the simulation has time to receive
+          // messages on nearby devices
+          m_broadcastEvent =  Simulator::Schedule (m_broadcast_interval, &WildfireClient::Broadcast, this);
         }
     }
 }

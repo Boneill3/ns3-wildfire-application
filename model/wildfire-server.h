@@ -71,6 +71,9 @@ private:
   /// Callbacks for tracing the received ack events
   TracedCallback<> m_ackTrace;
 
+  /// Callbacks for tracing the received subscription events
+  TracedCallback<> m_subTrace;
+
   std::vector<Address> subscribers;
   EventId m_sendEvent;   //!< Event to send the next packet
 

@@ -26,6 +26,7 @@
 #include "ns3/traced-callback.h"
 
 #include "wildfire-message.h"
+#include "wildfire-mobility-model.h"
 
 namespace ns3 {
 
@@ -49,6 +50,7 @@ public:
   virtual ~WildfireClient ();
   void ScheduleSubscription (Time dt, Ipv4Address dest);
   void SendSubscription (Ipv4Address dest);
+  void SetMobility (const Ptr<WildfireMobilityModel> mobility);
 
 protected:
   virtual void DoDispose (void);
@@ -87,6 +89,7 @@ private:
   Time m_broadcast_interval;
   uint32_t m_id = 0;
   uint16_t m_port;   //!< Port on which we listen for incoming packets.
+  Ptr<WildfireMobilityModel> m_mobility;
 
   // wildfire related messages
   std::string *m_key = nullptr; //Key from subscription service
@@ -106,6 +109,9 @@ private:
 
   /// Callback for wildfire notification received
   TracedCallback<> m_rxNotification;
+
+  /// Callback for wildfire notification received from peer
+  TracedCallback<> m_rxPeerNotification;
 
 };
 

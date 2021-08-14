@@ -7,11 +7,12 @@
 #     conf.check_nonfatal(header_name='stdint.h', define_name='HAVE_STDINT_H')
 
 def build(bld):
-    module = bld.create_ns3_module('wildfire', ['applications'])
+    module = bld.create_ns3_module('wildfire', ['applications', 'mobility'])
     module.source = [
         'model/wildfire-server.cc',
         'model/wildfire-client.cc',
         'model/wildfire-message.cc',
+        'model/wildfire-mobility-model.cc',
         'helper/wildfire-helper.cc',
         ]
 
@@ -31,6 +32,7 @@ def build(bld):
         'model/wildfire-server.h',
         'model/wildfire-client.h',
         'model/wildfire-message.h',
+        'model/wildfire-mobility-model.h',
         'helper/wildfire-helper.h',
         ]
 
