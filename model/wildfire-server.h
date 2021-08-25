@@ -54,6 +54,8 @@ private:
    * \param socket the socket the packet was received to.
    */
   void HandleRead (Ptr<Socket> socket);
+  bool HandleRequest (Ptr<Socket> socket, const Address & source);
+  void HandleAccept (Ptr<Socket> socket, const Address & source);
   void  SendMsg (Ptr<Socket> socket, Address* dest, WildfireMessage* message);
 
   uint16_t m_port;   //!< Port on which we listen for incoming packets.
@@ -74,7 +76,7 @@ private:
   /// Callbacks for tracing the received subscription events
   TracedCallback<> m_subTrace;
 
-  std::vector<Address> subscribers;
+  std::vector<std::tuple<Address,Ptr<Socket>>> subscribers;
   EventId m_sendEvent;   //!< Event to send the next packet
 
   std::string* m_privateKey;

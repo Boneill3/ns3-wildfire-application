@@ -94,15 +94,22 @@ WildfireServer::StartApplication ()
 
   if (m_socket == 0)
     {
-      TypeId tid = TypeId::LookupByName ("ns3::UdpSocketFactory");
+      TypeId tid = TypeId::LookupByName ("ns3::TcpSocketFactory");
       m_socket = Socket::CreateSocket (GetNode (), tid);
       InetSocketAddress local = InetSocketAddress (Ipv4Address::GetAny (), m_port);
       if (m_socket->Bind (local) == -1)
         {
           NS_FATAL_ERROR ("Failed to bind socket");
         }
+      
+      if (m_socket->Listen () == -1)
+        {
+          NS_FATAL_ERROR ("Failed to listen on socket");
+        }
     }
 
+  m_socket->SetAcceptCallback (MakeCallback (&WildfireServer::HandleRequest, this),
+                               MakeCallback (&WildfireServer::HandleAccept, this) );
   m_socket->SetRecvCallback (MakeCallback (&WildfireServer::HandleRead, this));
 }
 
@@ -135,17 +142,35 @@ WildfireServer::SendNotification ()
   id++;
   for (auto subscriber = subscribers.begin (); subscriber != subscribers.end (); ++subscriber)
     {
-      SendMsg (m_socket, &(*subscriber), &alert);
+      //NS_ASSERT (m_socket->Connect (InetSocketAddress::ConvertFrom (*subscriber)) != -1);
+      Address address = std::get<0>(*subscriber);
+      Ptr<Socket> socket = std::get<1>(*subscriber);
+      SendMsg (socket, &(address), &alert);
       NS_LOG_INFO ("Wildfire Notification SENT to " <<
-                   InetSocketAddress::ConvertFrom (*subscriber).GetIpv4 () << " port " <<
-                   InetSocketAddress::ConvertFrom (*subscriber).GetPort ());
+                   InetSocketAddress::ConvertFrom (address).GetIpv4 () << " port " <<
+                   InetSocketAddress::ConvertFrom (address).GetPort ());
     }
+}
+
+bool
+WildfireServer::HandleRequest (Ptr<Socket> socket, const Address & source)
+{
+  NS_LOG_INFO ("HandleRequest");
+  return true;
+}
+
+void
+WildfireServer::HandleAccept (Ptr<Socket> socket, const Address & source)
+{
+  NS_LOG_INFO ("HandleAccept");
+  socket->SetRecvCallback (MakeCallback (&WildfireServer::HandleRead, this));
 }
 
 void
 WildfireServer::HandleRead (Ptr<Socket> socket)
 {
   NS_LOG_FUNCTION (this << socket);
+  NS_LOG_INFO ("HandleRead");
 
   Ptr<Packet> packet;
   Address from;
@@ -178,7 +203,7 @@ WildfireServer::HandleRead (Ptr<Socket> socket)
       if(message.getType () == WildfireMessageType::subscribe)
         {
           NS_LOG_INFO ("Adding Subscriber");
-          subscribers.push_back (from);
+          subscribers.push_back (std::make_tuple(from, socket));
 
           m_subTrace ();
 

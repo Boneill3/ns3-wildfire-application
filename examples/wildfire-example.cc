@@ -78,11 +78,19 @@ main (int argc, char *argv[])
   // LogComponentEnable ("WildfireMobilityModel", LOG_LEVEL_INFO);
 
   NS_LOG_INFO ("Creating Topology");
+  Config::SetDefault ("ns3::TcpL4Protocol::SocketType", StringValue ("ns3::TcpNewReno"));
 
   /** LTE Model **/
   Ptr<LteHelper> lteHelper = CreateObject<LteHelper> ();
   Ptr<PointToPointEpcHelper> epcHelper = CreateObject<PointToPointEpcHelper> ();
   lteHelper->SetEpcHelper (epcHelper);
+
+
+  //----frequency related----
+  lteHelper->SetEnbDeviceAttribute ("DlEarfcn", UintegerValue (100*2)); //2120MHz
+  lteHelper->SetEnbDeviceAttribute ("UlEarfcn", UintegerValue (18100*2)); //1930MHz
+  lteHelper->SetEnbDeviceAttribute ("DlBandwidth", UintegerValue (25*2)); //5MHz
+  lteHelper->SetEnbDeviceAttribute ("UlBandwidth", UintegerValue (25*2)); //5MH
 
   Ptr<Node> pgw = epcHelper->GetPgwNode ();
 
@@ -124,7 +132,7 @@ main (int argc, char *argv[])
     {
       positionAlloc->Add (Vector (0, 0, 0));
       i += 1;
-      positionAlloc->Add (Vector (17500, 17500, 0));
+      positionAlloc->Add (Vector (0, 200, 0));
     }
 
   MobilityHelper mobility;
@@ -134,8 +142,8 @@ main (int argc, char *argv[])
 
   // Disconection from enb at 0,0 begins at 20000,20000
   mobility.SetPositionAllocator ("ns3::RandomDiscPositionAllocator",
-                                 "X", StringValue ("8750.0"),
-                                 "Y", StringValue ("8750.0"),
+                                 "X", StringValue ("0"),
+                                 "Y", StringValue ("100.0"),
                                  "Rho", StringValue ("ns3::UniformRandomVariable[Min=-100|Max=100]"));
   mobility.SetMobilityModel ("ns3::WildfireMobilityModel");
 
@@ -165,6 +173,7 @@ main (int argc, char *argv[])
 
   // Attach UEs to eNB
   lteHelper->AttachToClosestEnb (ueLteDevs, enbLteDevs);
+  //lteHelper->Attach(ueLteDevs, enbLteDevs.Get (0));
   // side effect: the default EPS bearer will be activated
 
 
@@ -198,7 +207,7 @@ main (int argc, char *argv[])
 
   for (uint32_t i = 0; i < wifiNodes.GetN (); ++i)
     {
-      anim.UpdateNodeDescription (wifiNodes.Get (i), "MOB"); // Optional
+      // anim.UpdateNodeDescription (wifiNodes.Get (i), "MOB"); // Optional
       anim.UpdateNodeColor (wifiNodes.Get (i), 255, 0, 0); // Optional
     }
 
@@ -268,7 +277,7 @@ main (int argc, char *argv[])
   serverApps.Start (Seconds (1.0));
   //serverApps.Stop (Seconds (60.0));
   // Delaying notification 60 seconds to give enought time for initialization
-  echoServer.ScheduleNotification (serverApps.Get (0), Seconds (10.0));
+  echoServer.ScheduleNotification (serverApps.Get (0), Seconds (5.0));
 
   WildfireClientHelper echoClient (remoteHostAddr, 202, 202);
   echoClient.SetAttribute ("BroadcastInterval", TimeValue (Seconds (1.0)));
@@ -318,10 +327,10 @@ main (int argc, char *argv[])
   //pointToPoint.EnableAsciiAll (ascii.CreateFileStream ("myfirst.tr"));
 
   // Schedule Network Disruption
-  Simulator::Schedule (Seconds (9.0), disconnect, enbLteDevs.Get (1));
+  Simulator::Schedule (Seconds (4.0), disconnect, enbLteDevs.Get (1));
 
   // Simulator must be stopped when using energy
-  Simulator::Stop (Seconds (15.0));
+  Simulator::Stop (Seconds (20.0));
 
   Simulator::Run ();
 

@@ -73,12 +73,15 @@ private:
    * \param socket the socket the packet was received to.
    */
   void HandleRead (Ptr<Socket> socket);
+  bool HandleRequest (Ptr<Socket> socket, const Address & source);
+  void HandleAccept (Ptr<Socket> socket, const Address & source);
 
   void  SendAck (Ptr<Socket> socket, Address* dest, uint32_t id);
   void  SendMsg (Ptr<Socket> socket, Address* dest, WildfireMessage* message);
   void  Broadcast ();
   void  SetRemote (Address ip, uint16_t port);
   void  SetRemote (Address addr);
+  void  RetrySubscribe (Ptr<Socket> socket);
 
   Ptr<Socket> m_socket; //!< Socket
   Address m_peerAddress; //!< Remote peer address
@@ -90,6 +93,7 @@ private:
   uint32_t m_id = 0;
   uint16_t m_port;   //!< Port on which we listen for incoming packets.
   Ptr<WildfireMobilityModel> m_mobility;
+  bool m_subscribed = false;
 
   // wildfire related messages
   std::string *m_key = nullptr; //Key from subscription service
