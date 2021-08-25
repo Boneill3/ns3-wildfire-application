@@ -94,22 +94,15 @@ WildfireServer::StartApplication ()
 
   if (m_socket == 0)
     {
-      TypeId tid = TypeId::LookupByName ("ns3::TcpSocketFactory");
+      TypeId tid = TypeId::LookupByName ("ns3::UdpSocketFactory");
       m_socket = Socket::CreateSocket (GetNode (), tid);
       InetSocketAddress local = InetSocketAddress (Ipv4Address::GetAny (), m_port);
       if (m_socket->Bind (local) == -1)
         {
           NS_FATAL_ERROR ("Failed to bind socket");
         }
-      
-      if (m_socket->Listen () == -1)
-        {
-          NS_FATAL_ERROR ("Failed to listen on socket");
-        }
     }
 
-  m_socket->SetAcceptCallback (MakeCallback (&WildfireServer::HandleRequest, this),
-                               MakeCallback (&WildfireServer::HandleAccept, this) );
   m_socket->SetRecvCallback (MakeCallback (&WildfireServer::HandleRead, this));
 }
 
@@ -143,8 +136,8 @@ WildfireServer::SendNotification ()
   for (auto subscriber = subscribers.begin (); subscriber != subscribers.end (); ++subscriber)
     {
       //NS_ASSERT (m_socket->Connect (InetSocketAddress::ConvertFrom (*subscriber)) != -1);
-      Address address = std::get<0>(*subscriber);
-      Ptr<Socket> socket = std::get<1>(*subscriber);
+      Address address = std::get<0> (*subscriber);
+      Ptr<Socket> socket = std::get<1> (*subscriber);
       SendMsg (socket, &(address), &alert);
       NS_LOG_INFO ("Wildfire Notification SENT to " <<
                    InetSocketAddress::ConvertFrom (address).GetIpv4 () << " port " <<
@@ -203,7 +196,7 @@ WildfireServer::HandleRead (Ptr<Socket> socket)
       if(message.getType () == WildfireMessageType::subscribe)
         {
           NS_LOG_INFO ("Adding Subscriber");
-          subscribers.push_back (std::make_tuple(from, socket));
+          subscribers.push_back (std::make_tuple (from, socket));
 
           m_subTrace ();
 

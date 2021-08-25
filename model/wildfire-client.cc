@@ -139,7 +139,7 @@ WildfireClient::StartApplication (void)
 
   if (m_socket == 0)
     {
-      TypeId tid = TypeId::LookupByName ("ns3::TcpSocketFactory");
+      TypeId tid = TypeId::LookupByName ("ns3::UdpSocketFactory");
       m_socket = Socket::CreateSocket (GetNode (), tid);
       if (Ipv4Address::IsMatchingType (m_peerAddress) == true)
         {
@@ -149,20 +149,14 @@ WildfireClient::StartApplication (void)
             {
               NS_FATAL_ERROR ("Failed to bind socket");
             }
-
-            if (m_socket->Listen () == -1)
-            {
-              NS_FATAL_ERROR ("Failed to listen on socket");
-            }
-
         }
       else
         {
           NS_ASSERT_MSG (false, "Incompatible address type: " << m_peerAddress);
         }
     }
-  m_socket->SetAcceptCallback (MakeCallback (&WildfireClient::HandleRequest, this),
-                               MakeCallback (&WildfireClient::HandleAccept, this) );
+  /*m_socket->SetAcceptCallback (MakeCallback (&WildfireClient::HandleRequest, this),
+                               MakeCallback (&WildfireClient::HandleAccept, this) );*/
   m_socket->SetRecvCallback (MakeCallback (&WildfireClient::HandleRead, this));
   m_socket->SetAllowBroadcast (true);
 }
@@ -324,7 +318,9 @@ void
 WildfireClient::RetrySubscribe (Ptr<Socket> socket)
 {
   if(m_subscribed)
+    {
       return;
+    }
 
   SendSubscription ( Ipv4Address::ConvertFrom (m_peerAddress) );
 }
@@ -338,7 +334,7 @@ WildfireClient::SendSubscription (Ipv4Address dest)
     }
 
   NS_ASSERT (m_socket->Connect (InetSocketAddress (Ipv4Address::ConvertFrom (m_peerAddress), m_peerPort)) != -1);
-  // Todo: move send details to seperate function
+  // TODO: move send details to seperate function
   Ptr<Packet> p;
   std::string message = std::string ("Subscription Request");
   Time expires_at = Time (Simulator::Now () + Hours (1));
@@ -350,13 +346,11 @@ WildfireClient::SendSubscription (Ipv4Address dest)
   m_socket->GetSockName (localAddress);
   m_txTrace ();
   m_txTraceWithAddresses (p, localAddress, InetSocketAddress (Ipv4Address::ConvertFrom (dest), 202));
-  // m_socket->Connect (InetSocketAddress (Ipv4Address::ConvertFrom (dest), 202));
   m_socket->Send (p);
-  //m_socket->Close ();
   Simulator::Schedule (Seconds (3.0), &WildfireClient::RetrySubscribe, this, m_socket);
 
   NS_LOG_INFO ("Wildfire Subscription Sent to " << dest);
-  NS_LOG_INFO ("At time " << Simulator::Now ().As (Time::S) << " Wildfire Subscription Sent from " << this->GetNode()->GetId());
+  NS_LOG_INFO ("At time " << Simulator::Now ().As (Time::S) << " Wildfire Subscription Sent from " << this->GetNode ()->GetId ());
 }
 
 } // Namespace ns3
